@@ -2,6 +2,7 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
+import com.stakkato95.raft.behavior.Candidate.RequestVote
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
@@ -11,8 +12,15 @@ import scala.concurrent.duration.FiniteDuration
 
 object Follower {
 
-  def apply(id: String, timers: TimerScheduler[Command], timeout: FiniteDuration): Behavior[BaseCommand] =
-    Behaviors.setup(new Follower(_, id, timers, timeout))
+  def apply(nodeId: String,
+            timeout: FiniteDuration,
+            log: ArrayBuffer[LogItem],
+            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] =
+    Behaviors.setup { context =>
+      Behaviors.withTimers { timers =>
+        new Follower(context, nodeId, timers, timeout, log, cluster)
+      }
+    }
 
   trait Command extends BaseCommand
 
@@ -25,24 +33,20 @@ object Follower {
                                  leaderCommit: Int,
                                  logItemUuid: String) extends Command
 
-  case class RequestVote(candidateTerm: Int,
-                         candidate: ActorRef[Command],
-                         lastLogItem: LastLogItem) extends Command
-
   private object HeartbeatTimerElapsed extends Command
 
 }
 
 class Follower(context: ActorContext[BaseCommand],
                nodeId: String,
-               timers: TimerScheduler[Command],
-               timeout: FiniteDuration) extends BaseRaftBehavior[BaseCommand](context) {
+               timers: TimerScheduler[BaseCommand],
+               timeout: FiniteDuration,
+               log: ArrayBuffer[LogItem],
+               cluster: ArrayBuffer[ActorRef[BaseCommand]])
+  extends BaseRaftBehavior[BaseCommand](context, nodeId, log, cluster) {
 
   context.log.info("{} is follower", nodeId)
   restartHeartbeatTimer()
-
-  private var lastLeader: Option[LeaderInfo] = None
-  private val log = ArrayBuffer[LogItem]()
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
@@ -56,6 +60,8 @@ class Follower(context: ActorContext[BaseCommand],
         this
       case HeartbeatTimerElapsed =>
         onHeartbeatTimerElapsed()
+      case _ =>
+        super.onMessage(msg)
     }
   }
 
@@ -88,7 +94,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onHeartbeatTimerElapsed(): Behavior[BaseCommand] = {
-    Candidate(nodeId)
+    Candidate(nodeId, log, cluster)
   }
 
   private def restartHeartbeatTimer() = {
