@@ -1,5 +1,7 @@
 package com.stakkato95.raft.behavior
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.RequestVote
@@ -15,46 +17,53 @@ object Follower {
   def apply(nodeId: String,
             timeout: FiniteDuration,
             log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] =
+            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
     Behaviors.setup { context =>
       Behaviors.withTimers { timers =>
         new Follower(context, nodeId, timers, timeout, log, cluster)
       }
     }
+  }
+
+  def apply(nodeId: String,
+            log: ArrayBuffer[LogItem],
+            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
+    apply(nodeId, HEART_BEAT_TIMEOUT, log, cluster)
+  }
 
   trait Command extends BaseCommand
 
-  case class AppendEntriesHeartbeat(leaderTerm: Int, leader: ActorRef[Leader.Command]) extends Command
+  final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo) extends Command
 
-  case class AppendEntriesNewLog(leaderTerm: Int,
-                                 leader: ActorRef[Leader.Command],
-                                 previousLogItem: LastLogItem,
-                                 newLogItem: String,
-                                 leaderCommit: Int,
-                                 logItemUuid: String) extends Command
+  final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
+                                       previousLogItem: LastLogItem,
+                                       newLogItem: String,
+                                       leaderCommit: Int,
+                                       logItemUuid: String) extends Command
 
-  private object HeartbeatTimerElapsed extends Command
+  private final object HeartbeatTimerElapsed extends Command
 
+  private val HEART_BEAT_TIMEOUT = FiniteDuration(1, TimeUnit.SECONDS)
 }
 
 class Follower(context: ActorContext[BaseCommand],
-               nodeId: String,
-               timers: TimerScheduler[BaseCommand],
-               timeout: FiniteDuration,
-               log: ArrayBuffer[LogItem],
-               cluster: ArrayBuffer[ActorRef[BaseCommand]])
-  extends BaseRaftBehavior[BaseCommand](context, nodeId, log, cluster) {
+               followerNodeId: String,
+               timer: TimerScheduler[BaseCommand],
+               heartBeatTimeout: FiniteDuration,
+               followerLog: ArrayBuffer[LogItem],
+               followerCluster: ArrayBuffer[ActorRef[BaseCommand]])
+  extends BaseRaftBehavior[BaseCommand](context, followerNodeId, followerLog, followerCluster) {
 
-  context.log.info("{} is follower", nodeId)
+  context.log.info("{} is follower", followerNodeId)
   restartHeartbeatTimer()
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
-      case AppendEntriesHeartbeat(leaderTerm, leader) =>
-        onHeartbeat(leaderTerm, leader)
+      case AppendEntriesHeartbeat(leaderInfo) =>
+        onHeartbeat(leaderInfo)
         this
-      case AppendEntriesNewLog(leaderTerm, leader, previousLogItem, newLogItem, leaderCommit, logItemUuid) =>
-        onAppendNewLogItem(leaderTerm, leader, previousLogItem, newLogItem, leaderCommit, logItemUuid)
+      case AppendEntriesNewLog(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid) =>
+        onAppendNewLogItem(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid)
         this
       case RequestVote(candidateTerm, candidate, lastLogItem) =>
         this
@@ -67,47 +76,52 @@ class Follower(context: ActorContext[BaseCommand],
 
   override def onSignal: PartialFunction[Signal, Behavior[BaseCommand]] = {
     case PostStop =>
-      context.log.info("{} stop", nodeId)
+      context.log.info("{} stop", followerNodeId)
       this
   }
 
-  private def onHeartbeat(leaderTerm: Int, leader: ActorRef[Leader.Command]) = {
-    updateLastLeader(leaderTerm, leader)
+  private def onHeartbeat(leaderInfo: LeaderInfo) = {
+    updateLastLeader(leaderInfo)
     restartHeartbeatTimer()
   }
 
-  private def onAppendNewLogItem(leaderTerm: Int,
-                                 leader: ActorRef[Leader.Command],
+  private def onAppendNewLogItem(leaderInfo: LeaderInfo,
                                  previousLogItem: LastLogItem,
                                  newLogItem: String,
                                  leaderCommit: Int,
                                  logItemUuid: String) = {
-    updateLastLeader(leaderTerm, leader)
+    //TODO update, only if leader's term is higher
+    updateLastLeader(leaderInfo)
 
     if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
-      log += LogItem(leaderTerm, newLogItem)
+      log += LogItem(leaderInfo.term, newLogItem)
       applyToSimpleStateMachine(log(leaderCommit))
-      leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId)
+      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, followerNodeId)
     } else {
-      leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId)
+      log = log.init
+      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, followerNodeId)
     }
   }
 
   private def onHeartbeatTimerElapsed(): Behavior[BaseCommand] = {
-    Candidate(nodeId, log, cluster)
+    Candidate(followerNodeId, log, followerCluster)
   }
 
   private def restartHeartbeatTimer() = {
-    timers.cancelAll()
-    timers.startSingleTimer(HeartbeatTimerElapsed, HeartbeatTimerElapsed, timeout)
+    timer.cancelAll()
+    timer.startSingleTimer(HeartbeatTimerElapsed, HeartbeatTimerElapsed, heartBeatTimeout)
   }
 
-  private def updateLastLeader(leaderTerm: Int, leader: ActorRef[Leader.Command]) = {
-    lastLeader = Some(LeaderInfo(leaderTerm, leader))
+  private def updateLastLeader(leaderInfo: LeaderInfo) = {
+    lastLeader = Some(leaderInfo)
   }
 
   private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: LastLogItem) = log match {
-    case ArrayBuffer(i, _*) => previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
-    case _ => true
+    case ArrayBuffer(i, _*) => {
+      previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
+    }
+    case _ => {
+      true
+    }
   }
 }
