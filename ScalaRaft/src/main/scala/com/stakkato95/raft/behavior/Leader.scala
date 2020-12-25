@@ -4,7 +4,8 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import com.stakkato95.raft.LogItem
+import com.stakkato95.raft.{LeaderInfo, LogItem}
+import com.stakkato95.raft.behavior.Follower.AppendEntriesHeartbeat
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 
 import scala.collection.mutable.ArrayBuffer
@@ -72,6 +73,6 @@ class Leader(context: ActorContext[BaseCommand],
   override def onSignal: PartialFunction[Signal, Behavior[BaseCommand]] = super.onSignal
 
   private def establishLeadership() = {
-    //    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(leaderTerm, context.self))
+    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self)))
   }
 }

@@ -29,7 +29,7 @@ object Candidate {
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, getElectionTimeout(), log, cluster)
+    apply(nodeId, ELECTION_TIMEOUT, log, cluster)
   }
 
   trait Command extends BaseCommand
@@ -47,12 +47,10 @@ object Candidate {
   private val MAX_ELECTION_TIMEOUT = 3
   private val MIN_ELECTION_TIMEOUT = 1
 
-  def getElectionTimeout(): FiniteDuration = {
+  def ELECTION_TIMEOUT: FiniteDuration = {
     val length = MIN_ELECTION_TIMEOUT + (rnd.nextFloat() * (MAX_ELECTION_TIMEOUT - MIN_ELECTION_TIMEOUT)).toLong
     FiniteDuration(length, TimeUnit.SECONDS)
   }
-
-  private val TERM_NOT_SET = -1
 }
 
 class Candidate(context: ActorContext[BaseCommand],
@@ -63,12 +61,11 @@ class Candidate(context: ActorContext[BaseCommand],
                 candidateCluster: ArrayBuffer[ActorRef[BaseCommand]])
   extends BaseRaftBehavior[BaseCommand](context, nodeId, candidateLog, candidateCluster) {
 
-  context.log.info("{} is candidate with election timeout {}", nodeId, electionTimeout)
-  startElection()
-  restartElectionTimer()
-
-  private var term = Candidate.TERM_NOT_SET
+  private var term: Option[Int] = None
   private var votes = 0
+
+  context.log.info("{} is candidate with election timeout {}", nodeId, electionTimeout)
+  restartElectionProcess()
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
@@ -79,6 +76,7 @@ class Candidate(context: ActorContext[BaseCommand],
       case AppendEntriesNewLog(leaderInfo, _, _, _, _) =>
         onAppendEntries(leaderInfo)
       case ElectionTimerElapsed =>
+        restartElectionProcess()
         this
     }
   }
@@ -88,12 +86,21 @@ class Candidate(context: ActorContext[BaseCommand],
       this
   }
 
+  private def restartElectionProcess() = {
+    startElection()
+    startElectionTimer()
+  }
+
   private def startElection() = {
-    term = lastLeader match {
-      case None => Leader.INITIAL_TERM + 1
-      case Some(LeaderInfo(t, _)) if term == Candidate.TERM_NOT_SET => t + 1
-      case _ => term + 1
+    if (term.isDefined) {
+      term = term.map(_ + 1)
+    } else {
+      term = lastLeader match {
+        case None => Some(Leader.INITIAL_TERM + 1) //there was no Leader before
+        case Some(LeaderInfo(t, _)) if term.isEmpty => Some(t + 1) //there was Leader before
+      }
     }
+
     votes = 1
 
     val lastItem = candidateLog match {
@@ -101,11 +108,10 @@ class Candidate(context: ActorContext[BaseCommand],
       case _ => None
     }
 
-    getRestOfCluster().foreach(_ ! RequestVote(term, context.self, lastItem))
+    getRestOfCluster().foreach(_ ! RequestVote(term.get, context.self, lastItem))
   }
 
-  private def restartElectionTimer() = {
-    timer.cancelAll()
+  private def startElectionTimer() = {
     timer.startSingleTimer(ElectionTimerElapsed, ElectionTimerElapsed, electionTimeout)
   }
 
@@ -113,14 +119,20 @@ class Candidate(context: ActorContext[BaseCommand],
     votes += 1
 
     if (votes == getQuorumSize()) {
-      Leader(nodeId, candidateLog, candidateCluster, term)
+      timer.cancel(ElectionTimerElapsed)
+      Leader(nodeId, candidateLog, candidateCluster, term.get)
     } else {
       this
     }
   }
 
   def onAppendEntries(leaderInfo: LeaderInfo): Behavior[BaseCommand] = {
-    if (leaderInfo.term >= term) {
+    val t = term match {
+      case None => Leader.INITIAL_TERM
+      case Some(value) => value
+    }
+
+    if (leaderInfo.term >= t) {
       Follower(nodeId, log, cluster)
     } else {
       this

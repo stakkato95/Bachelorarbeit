@@ -27,7 +27,7 @@ object Follower {
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, Candidate.getElectionTimeout(), log, cluster)
+    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster)
   }
 
   trait Command extends BaseCommand
