@@ -116,7 +116,7 @@ class Candidate(context: ActorContext[BaseCommand],
   private def onVoteGranted(): Behavior[BaseCommand] = {
     votes += 1
 
-    if (votes == quorumSize()) {
+    if (votes == quorumSize) {
       timer.cancel(ElectionTimerElapsed)
       Leader(candidateNodeId, candidateLog, candidateCluster, term.get)
     } else {
