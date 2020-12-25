@@ -1,7 +1,6 @@
 import java.util.concurrent.TimeUnit
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import akka.actor.typed.ActorRef
 import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Candidate
 import com.stakkato95.raft.behavior.Candidate.{RequestVote, VoteGranted}
@@ -105,21 +104,18 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
     }
 
     "become follower, when receives AppendEntries from a new Leader" in {
-//      val leader = createTestProbe[BaseCommand]()
-//      val leaderTerm = 2
-//
-//      val candidate = spawn(Candidate(
-//        nodeId = "node-1",
-//        timeout = FiniteDuration(3, TimeUnit.SECONDS),
-//        log = ArrayBuffer(),
-//        cluster = ArrayBuffer(leader.ref)
-//      ))
-//
-//      candidate ! AppendEntriesHeartbeat(LeaderInfo(term = leaderTerm, leader.ref))
-    }
-
-    "bec follower, when receives AppendEntries from a new Leader" in {
-
+      //TODO add debug event to follower. When follower starts send "FollowerStarted(nodeId)"
+      //      val leader = createTestProbe[BaseCommand]()
+      //      val leaderTerm = 2
+      //
+      //      val candidate = spawn(Candidate(
+      //        nodeId = "node-1",
+      //        timeout = FiniteDuration(3, TimeUnit.SECONDS),
+      //        log = ArrayBuffer(),
+      //        cluster = ArrayBuffer(leader.ref)
+      //      ))
+      //
+      //      candidate ! AppendEntriesHeartbeat(LeaderInfo(term = leaderTerm, leader.ref))
     }
   }
 }
