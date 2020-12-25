@@ -56,6 +56,7 @@ class Follower(context: ActorContext[BaseCommand],
   context.log.info("{} is follower", followerNodeId)
   restartHeartbeatTimer()
 
+  //TODO reset to "None" when new leader established with AppendEntriesHeartbeat
   private var grantedVote: Option[Int] = None
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {

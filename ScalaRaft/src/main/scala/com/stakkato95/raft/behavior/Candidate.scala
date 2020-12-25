@@ -105,7 +105,7 @@ class Candidate(context: ActorContext[BaseCommand],
 
     votes = 1
 
-    val msg = RequestVote(term.get, context.self, getPreviousLogItem)
+    val msg = RequestVote(term.get, context.self, previousLogItem)
     getRestOfCluster().foreach(_ ! msg)
   }
 
@@ -116,7 +116,7 @@ class Candidate(context: ActorContext[BaseCommand],
   private def onVoteGranted(): Behavior[BaseCommand] = {
     votes += 1
 
-    if (votes == getQuorumSize()) {
+    if (votes == quorumSize()) {
       timer.cancel(ElectionTimerElapsed)
       Leader(candidateNodeId, candidateLog, candidateCluster, term.get)
     } else {

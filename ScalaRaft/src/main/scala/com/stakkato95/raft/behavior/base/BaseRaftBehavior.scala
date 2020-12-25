@@ -27,7 +27,7 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
     value = item.value
   }
 
-  final protected def getQuorumSize() = {
+  final protected def quorumSize: Int = {
     cluster.size / 2 + 1
   }
 
@@ -35,7 +35,7 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
     cluster.filter(_ != context.self)
   }
 
-  final protected def getPreviousLogItem: Option[LastLogItem] = {
+  final protected def previousLogItem: Option[LastLogItem] = {
     log match {
       case ArrayBuffer(_, _*) => Some(LastLogItem(log.size - 1, log.last.leaderTerm))
       case _ => None

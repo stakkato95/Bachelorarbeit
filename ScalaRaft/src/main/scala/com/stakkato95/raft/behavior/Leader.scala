@@ -4,7 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, Uuid}
+import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, PendingItem, Uuid}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
@@ -55,10 +55,6 @@ class Leader(context: ActorContext[BaseCommand],
              leaderCluster: ArrayBuffer[ActorRef[BaseCommand]],
              leaderTerm: Int) extends BaseRaftBehavior[BaseCommand](context, leaderNodeId, leaderLog, leaderCluster) {
 
-
-  context.log.info("{} is follower", nodeId)
-  establishLeadership()
-
   //index of the next log entry the leader will send to that follower.
 
   //When a leader first comes to power, it initializes all nextIndex
@@ -71,7 +67,11 @@ class Leader(context: ActorContext[BaseCommand],
   // Once AppendEntries succeeds, the follower’s log is consistent with the leader’s,
   // and it will remain that way for the rest of the term.
   private var nextIndices = Map[String, Int]()
-  private var pendingItems = Map[String, LogItem]()
+  private var pendingItems = Map[String, PendingItem]()
+  private var leaderCommit = 0
+
+  context.log.info("{} is follower", nodeId)
+  establishLeadership()
 
   //TODO timers to repeat sending of log items, which have not been confirmed
 
@@ -96,19 +96,33 @@ class Leader(context: ActorContext[BaseCommand],
 
   private def onClientRequest(value: String) = {
     val uuid = Uuid.get
-    pendingItems += uuid -> LogItem(leaderTerm, value)
+    pendingItems += uuid -> PendingItem(LogItem(leaderTerm, value), 0)
 
     val msg = AppendEntriesNewLog(
       leaderInfo = LeaderInfo(leaderTerm, context.self),
-      previousLogItem = getPreviousLogItem,
+      previousLogItem = previousLogItem,
       newLogItem = value,
-      leaderCommit = 100500,
+      leaderCommit = leaderCommit,
       logItemUuid = uuid
     )
     getRestOfCluster().foreach(_ ! msg)
   }
 
   private def onAppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) = {
+    if (success) {
+      pendingItems(logItemUuid).votes += 1
 
+      if (pendingItems(logItemUuid).votes >= quorumSize) {
+        val pendingItem = pendingItems(logItemUuid)
+        pendingItems -= logItemUuid
+
+        val logItem = pendingItem.logItem
+        log += logItem
+        applyToSimpleStateMachine(logItem)
+        leaderCommit += 1
+      }
+    } else {
+      //TODO resend logic
+    }
   }
 }
