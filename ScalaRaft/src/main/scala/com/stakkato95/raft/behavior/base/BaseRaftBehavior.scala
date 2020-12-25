@@ -9,9 +9,8 @@ import scala.collection.mutable.ArrayBuffer
 abstract class BaseRaftBehavior[T](context: ActorContext[T],
                                    protected val nodeId: String,
                                    protected var log: ArrayBuffer[LogItem],
-                                   protected var cluster: ArrayBuffer[ActorRef[BaseCommand]]) extends AbstractBehavior[T](context) {
-
-  protected var value: String = _
+                                   protected var cluster: ArrayBuffer[ActorRef[BaseCommand]],
+                                   protected var currentStateMachineValue: String) extends AbstractBehavior[T](context) {
 
   protected var lastLeader: Option[LeaderInfo] = None
 
@@ -24,7 +23,7 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
   }
 
   final protected def applyToSimpleStateMachine(item: LogItem) = {
-    value = item.value
+    currentStateMachineValue += item.value
   }
 
   final protected def quorumSize: Int = {

@@ -18,18 +18,20 @@ object Candidate {
   def apply(nodeId: String,
             timeout: FiniteDuration,
             log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
+            cluster: ArrayBuffer[ActorRef[BaseCommand]],
+            stateMachineValue: String): Behavior[BaseCommand] = {
     Behaviors.setup { context =>
       Behaviors.withTimers { timer =>
-        new Candidate(context, nodeId, timer, timeout, log, cluster)
+        new Candidate(context, nodeId, timer, timeout, log, cluster, stateMachineValue)
       }
     }
   }
 
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, ELECTION_TIMEOUT, log, cluster)
+            cluster: ArrayBuffer[ActorRef[BaseCommand]],
+            stateMachineValue: String): Behavior[BaseCommand] = {
+    apply(nodeId, ELECTION_TIMEOUT, log, cluster, stateMachineValue)
   }
 
   trait Command extends BaseCommand
@@ -58,8 +60,14 @@ class Candidate(context: ActorContext[BaseCommand],
                 timer: TimerScheduler[BaseCommand],
                 electionTimeout: FiniteDuration,
                 candidateLog: ArrayBuffer[LogItem],
-                candidateCluster: ArrayBuffer[ActorRef[BaseCommand]])
-  extends BaseRaftBehavior[BaseCommand](context, candidateNodeId, candidateLog, candidateCluster) {
+                candidateCluster: ArrayBuffer[ActorRef[BaseCommand]],
+                stateMachineValue: String)
+  extends BaseRaftBehavior[BaseCommand](
+    context,
+    candidateNodeId,
+    candidateLog,
+    candidateCluster,
+    stateMachineValue) {
 
   private var term: Option[Int] = None
   private var votes = 0
@@ -118,7 +126,7 @@ class Candidate(context: ActorContext[BaseCommand],
 
     if (votes == quorumSize) {
       timer.cancel(ElectionTimerElapsed)
-      Leader(candidateNodeId, candidateLog, candidateCluster, term.get)
+      Leader(candidateNodeId, candidateLog, candidateCluster, term.get, currentStateMachineValue)
     } else {
       this
     }
@@ -131,7 +139,7 @@ class Candidate(context: ActorContext[BaseCommand],
     }
 
     if (leaderInfo.term >= t) {
-      Follower(candidateNodeId, log, cluster)
+      Follower(candidateNodeId, log, cluster, currentStateMachineValue)
     } else {
       this
     }

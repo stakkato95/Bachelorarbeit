@@ -6,7 +6,8 @@ import com.stakkato95.raft.behavior.Follower
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.BaseCommand
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, Uuid}
+import com.stakkato95.raft.uuid.Uuid
+import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
@@ -24,7 +25,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = FollowerSpec.NODE_ID,
         timeout = FollowerSpec.TIMEOUT,
         log = ArrayBuffer(),
-        cluster = ArrayBuffer(node1.ref, node2.ref)
+        cluster = ArrayBuffer(node1.ref, node2.ref),
+        stateMachineValue = ""
       ))
 
       val msg = RequestVote(
@@ -59,7 +61,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(leader.ref)
+        cluster = ArrayBuffer(leader.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesNewLog(
@@ -98,7 +101,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(leader.ref)
+        cluster = ArrayBuffer(leader.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesNewLog(
@@ -137,7 +141,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(currentLeader.ref, candidate.ref)
+        cluster = ArrayBuffer(currentLeader.ref, candidate.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesHeartbeat(LeaderInfo(
@@ -171,7 +176,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(currentLeader.ref, candidate.ref)
+        cluster = ArrayBuffer(currentLeader.ref, candidate.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesHeartbeat(LeaderInfo(
@@ -205,7 +211,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref)
+        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesHeartbeat(LeaderInfo(
@@ -239,7 +246,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = nodeId,
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
-        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref, candidate2.ref)
+        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref, candidate2.ref),
+        stateMachineValue = ""
       ))
 
       follower ! AppendEntriesHeartbeat(LeaderInfo(

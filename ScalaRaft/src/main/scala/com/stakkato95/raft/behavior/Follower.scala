@@ -16,18 +16,20 @@ object Follower {
   def apply(nodeId: String,
             timeout: FiniteDuration,
             log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
+            cluster: ArrayBuffer[ActorRef[BaseCommand]],
+            stateMachineValue: String): Behavior[BaseCommand] = {
     Behaviors.setup { context =>
       Behaviors.withTimers { timers =>
-        new Follower(context, nodeId, timers, timeout, log, cluster)
+        new Follower(context, nodeId, timers, timeout, log, cluster, stateMachineValue)
       }
     }
   }
 
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster)
+            cluster: ArrayBuffer[ActorRef[BaseCommand]],
+            stateMachineValue: String): Behavior[BaseCommand] = {
+    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster, stateMachineValue)
   }
 
   trait Command extends BaseCommand
@@ -50,8 +52,14 @@ class Follower(context: ActorContext[BaseCommand],
                timer: TimerScheduler[BaseCommand],
                heartBeatTimeout: FiniteDuration,
                followerLog: ArrayBuffer[LogItem],
-               followerCluster: ArrayBuffer[ActorRef[BaseCommand]])
-  extends BaseRaftBehavior[BaseCommand](context, followerNodeId, followerLog, followerCluster) {
+               followerCluster: ArrayBuffer[ActorRef[BaseCommand]],
+               stateMachineValue: String)
+  extends BaseRaftBehavior[BaseCommand](
+    context,
+    followerNodeId,
+    followerLog,
+    followerCluster,
+    stateMachineValue) {
 
   context.log.info("{} is follower", followerNodeId)
   restartHeartbeatTimer()
@@ -136,7 +144,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onHeartbeatTimerElapsed(): Behavior[BaseCommand] = {
-    Candidate(followerNodeId, log, followerCluster)
+    Candidate(followerNodeId, log, followerCluster, currentStateMachineValue)
   }
 
   private def restartHeartbeatTimer() = {

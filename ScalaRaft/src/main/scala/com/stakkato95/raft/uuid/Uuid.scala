@@ -1,4 +1,4 @@
-package com.stakkato95.raft
+package com.stakkato95.raft.uuid
 
 import java.util.UUID
 

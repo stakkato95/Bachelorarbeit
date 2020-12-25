@@ -23,7 +23,8 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = "node-1",
         timeout = FiniteDuration(4, TimeUnit.SECONDS),
         log = ArrayBuffer(),
-        cluster = ArrayBuffer(follower1.ref, follower2.ref)
+        cluster = ArrayBuffer(follower1.ref, follower2.ref),
+        stateMachineValue = ""
       ))
 
       val requestVoteMsg = RequestVote(
@@ -55,7 +56,8 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = "node-1",
         timeout = FiniteDuration(4, TimeUnit.SECONDS),
         log = ArrayBuffer(),
-        cluster = ArrayBuffer(follower1.ref, follower2.ref, follower3.ref, follower4.ref)
+        cluster = ArrayBuffer(follower1.ref, follower2.ref, follower3.ref, follower4.ref),
+        stateMachineValue = ""
       ))
 
       val requestVoteMsg = RequestVote(
@@ -85,7 +87,8 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = "node-1",
         timeout = FiniteDuration(timeoutTime, TimeUnit.SECONDS),
         log = ArrayBuffer(),
-        cluster = ArrayBuffer(follower1.ref)
+        cluster = ArrayBuffer(follower1.ref),
+        stateMachineValue = ""
       ))
 
       val reqVoteTermOne = RequestVote(

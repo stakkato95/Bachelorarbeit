@@ -4,10 +4,11 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, PendingItem, Uuid}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
-import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest}
+import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
+import com.stakkato95.raft.uuid.UuidProvider
+import com.stakkato95.raft.{DefaultUuid, LeaderInfo, LogItem, PendingItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -18,10 +19,12 @@ object Leader {
             timeout: FiniteDuration,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]],
-            leaderTerm: Int): Behavior[BaseCommand] = {
+            leaderTerm: Int,
+            uuidProvider: UuidProvider,
+            stateMachineValue: String): Behavior[BaseCommand] = {
     Behaviors.setup { context =>
       Behaviors.withTimers { timers =>
-        new Leader(context, nodeId, timers, timeout, log, cluster, leaderTerm)
+        new Leader(context, nodeId, timers, timeout, log, cluster, leaderTerm, uuidProvider, stateMachineValue)
       }
     }
   }
@@ -29,15 +32,16 @@ object Leader {
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]],
-            leaderTerm: Int): Behavior[BaseCommand] = {
-    apply(nodeId, RESEND_LOG_TIMEOUT, log, cluster, leaderTerm)
+            leaderTerm: Int,
+            stateMachineValue: String): Behavior[BaseCommand] = {
+    apply(nodeId, RESEND_LOG_TIMEOUT, log, cluster, leaderTerm, new DefaultUuid, stateMachineValue)
   }
 
   trait Command extends BaseCommand
 
   final case class AppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) extends Command
 
-  final case class ClientRequest(value: String) extends Command
+  final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
   final case class ClientResponse(currentState: String)
 
@@ -53,7 +57,15 @@ class Leader(context: ActorContext[BaseCommand],
              timeout: FiniteDuration,
              leaderLog: ArrayBuffer[LogItem],
              leaderCluster: ArrayBuffer[ActorRef[BaseCommand]],
-             leaderTerm: Int) extends BaseRaftBehavior[BaseCommand](context, leaderNodeId, leaderLog, leaderCluster) {
+             leaderTerm: Int,
+             uuidProvider: UuidProvider,
+             stateMachineValue: String)
+  extends BaseRaftBehavior[BaseCommand](
+    context,
+    leaderNodeId,
+    leaderLog,
+    leaderCluster,
+    stateMachineValue) {
 
   //index of the next log entry the leader will send to that follower.
 
@@ -77,8 +89,8 @@ class Leader(context: ActorContext[BaseCommand],
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
-      case ClientRequest(value) =>
-        onClientRequest(value)
+      case ClientRequest(value, replyTo) =>
+        onClientRequest(value, replyTo)
         this
       case AppendEntriesResponse(success, logItemUuid, nodeId) =>
         onAppendEntriesResponse(success, logItemUuid, nodeId)
@@ -94,9 +106,11 @@ class Leader(context: ActorContext[BaseCommand],
     getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self)))
   }
 
-  private def onClientRequest(value: String) = {
-    val uuid = Uuid.get
-    pendingItems += uuid -> PendingItem(LogItem(leaderTerm, value), 0)
+  private def onClientRequest(value: String, replyTo: ActorRef[ClientResponse]) = {
+    val uuid = uuidProvider.get
+    val logItem = LogItem(leaderTerm, value)
+    pendingItems += uuid -> PendingItem(logItem, 1, replyTo)
+    log += logItem
 
     val msg = AppendEntriesNewLog(
       leaderInfo = LeaderInfo(leaderTerm, context.self),
@@ -115,11 +129,10 @@ class Leader(context: ActorContext[BaseCommand],
       if (pendingItems(logItemUuid).votes >= quorumSize) {
         val pendingItem = pendingItems(logItemUuid)
         pendingItems -= logItemUuid
-
-        val logItem = pendingItem.logItem
-        log += logItem
-        applyToSimpleStateMachine(logItem)
+        applyToSimpleStateMachine(pendingItem.logItem)
         leaderCommit += 1
+
+        pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
       }
     } else {
       //TODO resend logic
