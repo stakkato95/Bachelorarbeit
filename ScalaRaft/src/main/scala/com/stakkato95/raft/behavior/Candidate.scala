@@ -2,13 +2,15 @@ package com.stakkato95.raft.behavior
 
 import java.util.concurrent.TimeUnit
 
-import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
+import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
+import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
-import com.stakkato95.raft.behavior.Candidate.{Command, ElectionTimerElapsed, RequestVote, VoteGranted}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Random
 
 object Candidate {
 
@@ -26,7 +28,7 @@ object Candidate {
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, ELECTION_TIMEOUT, log, cluster)
+    apply(nodeId, getElectionTimeout(), log, cluster)
   }
 
   trait Command extends BaseCommand
@@ -39,16 +41,22 @@ object Candidate {
 
   final object VoteGranted extends Command
 
-  private val ELECTION_TIMEOUT = FiniteDuration(1, TimeUnit.SECONDS)
+  private val rnd = new Random()
+
+  private val MAX_ELECTION_TIMEOUT = 3
+
+  def getElectionTimeout(): FiniteDuration = {
+    FiniteDuration((rnd.nextFloat() * MAX_ELECTION_TIMEOUT).toLong, TimeUnit.SECONDS)
+  }
 }
 
 class Candidate(context: ActorContext[BaseCommand],
                 nodeId: String,
                 timer: TimerScheduler[BaseCommand],
                 electionTimeout: FiniteDuration,
-                log: ArrayBuffer[LogItem],
-                cluster: ArrayBuffer[ActorRef[BaseCommand]])
-  extends BaseRaftBehavior[BaseCommand](context, nodeId, log, cluster) {
+                candidateLog: ArrayBuffer[LogItem],
+                candidateCluster: ArrayBuffer[ActorRef[BaseCommand]])
+  extends BaseRaftBehavior[BaseCommand](context, nodeId, candidateLog, candidateCluster) {
 
   context.log.info("{} is candidate", nodeId)
   startElection()
@@ -61,6 +69,10 @@ class Candidate(context: ActorContext[BaseCommand],
     msg match {
       case VoteGranted =>
         onVoteGranted()
+      case AppendEntriesHeartbeat(leaderInfo) =>
+        onAppendEntries(leaderInfo)
+      case AppendEntriesNewLog(leaderInfo, _, _, _, _) =>
+        onAppendEntries(leaderInfo)
     }
   }
 
@@ -76,8 +88,8 @@ class Candidate(context: ActorContext[BaseCommand],
     }
     votes += 1
 
-    val lastItem = log match {
-      case ArrayBuffer(_, _*) => Some(LastLogItem(log.size - 1, log.last.leaderTerm))
+    val lastItem = candidateLog match {
+      case ArrayBuffer(_, _*) => Some(LastLogItem(candidateLog.size - 1, candidateLog.last.leaderTerm))
       case _ => None
     }
 
@@ -93,7 +105,15 @@ class Candidate(context: ActorContext[BaseCommand],
     votes += 1
 
     if (votes == getQuorumSize()) {
-      Leader(nodeId, log, cluster, term)
+      Leader(nodeId, candidateLog, candidateCluster, term)
+    } else {
+      this
+    }
+  }
+
+  def onAppendEntries(leaderInfo: LeaderInfo): Behavior[BaseCommand] = {
+    if (leaderInfo.term >= term) {
+      Follower(nodeId, log, cluster)
     } else {
       this
     }

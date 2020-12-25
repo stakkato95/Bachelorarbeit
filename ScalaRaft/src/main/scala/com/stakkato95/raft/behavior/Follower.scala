@@ -1,7 +1,5 @@
 package com.stakkato95.raft.behavior
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.RequestVote
@@ -28,11 +26,12 @@ object Follower {
   def apply(nodeId: String,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]]): Behavior[BaseCommand] = {
-    apply(nodeId, HEART_BEAT_TIMEOUT, log, cluster)
+    apply(nodeId, Candidate.getElectionTimeout(), log, cluster)
   }
 
   trait Command extends BaseCommand
 
+  //TODO heartbeat also includes "leaderCommit: Int" !!!
   final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo) extends Command
 
   final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
@@ -43,7 +42,6 @@ object Follower {
 
   private final object HeartbeatTimerElapsed extends Command
 
-  private val HEART_BEAT_TIMEOUT = FiniteDuration(1, TimeUnit.SECONDS)
 }
 
 class Follower(context: ActorContext[BaseCommand],
@@ -66,6 +64,7 @@ class Follower(context: ActorContext[BaseCommand],
         onAppendNewLogItem(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid)
         this
       case RequestVote(candidateTerm, candidate, lastLogItem) =>
+        //TODO Each server will vote for at most one candidate in a given term, on a first-come-first-served basis
         this
       case HeartbeatTimerElapsed =>
         onHeartbeatTimerElapsed()
@@ -89,8 +88,19 @@ class Follower(context: ActorContext[BaseCommand],
                                  previousLogItem: LastLogItem,
                                  newLogItem: String,
                                  leaderCommit: Int,
-                                 logItemUuid: String) = {
-    //TODO update, only if leader's term is higher
+                                 logItemUuid: String): Unit = {
+    //TODO Page 11
+    //TODO To prevent this problem, servers disregard RequestVote RPCs when they believe a current leader exists.
+    //TODO update, only if leader's term is higher?
+    val lastSeenTerm = lastLeader match {
+      case Some(LeaderInfo(term, _)) => term
+      case None => Leader.INITIAL_TERM
+    }
+
+    if (leaderInfo.term < lastSeenTerm) {
+      return
+    }
+
     updateLastLeader(leaderInfo)
 
     if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
@@ -117,11 +127,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: LastLogItem) = log match {
-    case ArrayBuffer(i, _*) => {
-      previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
-    }
-    case _ => {
-      true
-    }
+    case ArrayBuffer(i, _*) => previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
+    case _ => true
   }
 }
