@@ -1,13 +1,12 @@
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
 import com.stakkato95.raft.behavior.Candidate.{RequestVote, VoteGranted}
+import com.stakkato95.raft.behavior.Follower
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.BaseCommand
-import com.stakkato95.raft.behavior.{Follower, Leader}
+import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, Uuid}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
@@ -54,7 +53,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderTerm = followerInitialLog.last.leaderTerm
       )
       val leaderCommit = followerInitialLog.size - 1
-      val logItemUuid = UUID.randomUUID().toString
+      val logItemUuid = Uuid.get
 
       val follower = spawn(Follower(
         nodeId = nodeId,
@@ -65,7 +64,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
-        previousLogItem = previousLogItem,
+        previousLogItem = Some(previousLogItem),
         newLogItem = "new",
         leaderCommit = leaderCommit,
         logItemUuid = logItemUuid
@@ -93,7 +92,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         index = leaderCommit,
         leaderTerm = leaderTerm
       )
-      val logItemUuid = UUID.randomUUID().toString
+      val logItemUuid = Uuid.get
 
       val follower = spawn(Follower(
         nodeId = nodeId,
@@ -104,7 +103,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
-        previousLogItem = previousLogItem,
+        previousLogItem = Some(previousLogItem),
         newLogItem = "new",
         leaderCommit = leaderCommit,
         logItemUuid = logItemUuid

@@ -36,7 +36,7 @@ object Follower {
   final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo) extends Command
 
   final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
-                                       previousLogItem: LastLogItem,
+                                       previousLogItem: Option[LastLogItem],
                                        newLogItem: String,
                                        leaderCommit: Int,
                                        logItemUuid: String) extends Command
@@ -88,7 +88,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onAppendNewLogItem(leaderInfo: LeaderInfo,
-                                 previousLogItem: LastLogItem,
+                                 previousLogItem: Option[LastLogItem],
                                  newLogItem: String,
                                  leaderCommit: Int,
                                  logItemUuid: String): Unit = {
@@ -113,7 +113,7 @@ class Follower(context: ActorContext[BaseCommand],
 
   private def onRequestVote(candidateTerm: Int, candidate: ActorRef[Command], lastLogItem: Option[LastLogItem]) = {
     val lastLogItemsAreEqual = lastLogItem match {
-      case Some(item) => previousItemFromLeaderLogEqualsLastLogItem(item)
+      case item => previousItemFromLeaderLogEqualsLastLogItem(item)
       case None => true
     }
 
@@ -147,8 +147,9 @@ class Follower(context: ActorContext[BaseCommand],
     lastLeader = Some(leaderInfo)
   }
 
-  private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: LastLogItem) = log match {
-    case ArrayBuffer(i, _*) => previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
+  private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: Option[LastLogItem]) = log match {
+    case ArrayBuffer(i, _*) if previousLogItem.isDefined =>
+      previousLogItem.get.leaderTerm == log.last.leaderTerm && previousLogItem.get.index == log.length - 1
     case _ => true
   }
 

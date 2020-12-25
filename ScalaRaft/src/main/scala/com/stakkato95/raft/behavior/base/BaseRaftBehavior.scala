@@ -2,7 +2,7 @@ package com.stakkato95.raft.behavior.base
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.{LeaderInfo, LogItem}
+import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -33,5 +33,12 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
 
   final protected def getRestOfCluster() = {
     cluster.filter(_ != context.self)
+  }
+
+  final protected def getPreviousLogItem: Option[LastLogItem] = {
+    log match {
+      case ArrayBuffer(_, _*) => Some(LastLogItem(log.size - 1, log.last.leaderTerm))
+      case _ => None
+    }
   }
 }

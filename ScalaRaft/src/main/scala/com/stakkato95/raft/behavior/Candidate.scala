@@ -54,17 +54,17 @@ object Candidate {
 }
 
 class Candidate(context: ActorContext[BaseCommand],
-                nodeId: String,
+                candidateNodeId: String,
                 timer: TimerScheduler[BaseCommand],
                 electionTimeout: FiniteDuration,
                 candidateLog: ArrayBuffer[LogItem],
                 candidateCluster: ArrayBuffer[ActorRef[BaseCommand]])
-  extends BaseRaftBehavior[BaseCommand](context, nodeId, candidateLog, candidateCluster) {
+  extends BaseRaftBehavior[BaseCommand](context, candidateNodeId, candidateLog, candidateCluster) {
 
   private var term: Option[Int] = None
   private var votes = 0
 
-  context.log.info("{} is candidate with election timeout {}", nodeId, electionTimeout)
+  context.log.info("{} is candidate with election timeout {}", candidateNodeId, electionTimeout)
   restartElectionProcess()
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
@@ -78,6 +78,8 @@ class Candidate(context: ActorContext[BaseCommand],
       case ElectionTimerElapsed =>
         restartElectionProcess()
         this
+      case _ =>
+        super.onMessage(msg)
     }
   }
 
@@ -103,12 +105,8 @@ class Candidate(context: ActorContext[BaseCommand],
 
     votes = 1
 
-    val lastItem = candidateLog match {
-      case ArrayBuffer(_, _*) => Some(LastLogItem(candidateLog.size - 1, candidateLog.last.leaderTerm))
-      case _ => None
-    }
-
-    getRestOfCluster().foreach(_ ! RequestVote(term.get, context.self, lastItem))
+    val msg = RequestVote(term.get, context.self, getPreviousLogItem)
+    getRestOfCluster().foreach(_ ! msg)
   }
 
   private def startElectionTimer() = {
@@ -120,7 +118,7 @@ class Candidate(context: ActorContext[BaseCommand],
 
     if (votes == getQuorumSize()) {
       timer.cancel(ElectionTimerElapsed)
-      Leader(nodeId, candidateLog, candidateCluster, term.get)
+      Leader(candidateNodeId, candidateLog, candidateCluster, term.get)
     } else {
       this
     }
@@ -133,7 +131,7 @@ class Candidate(context: ActorContext[BaseCommand],
     }
 
     if (leaderInfo.term >= t) {
-      Follower(nodeId, log, cluster)
+      Follower(candidateNodeId, log, cluster)
     } else {
       this
     }

@@ -4,8 +4,9 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
-import com.stakkato95.raft.{LeaderInfo, LogItem}
-import com.stakkato95.raft.behavior.Follower.AppendEntriesHeartbeat
+import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem, Uuid}
+import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
+import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 
 import scala.collection.mutable.ArrayBuffer
@@ -36,6 +37,10 @@ object Leader {
 
   final case class AppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) extends Command
 
+  final case class ClientRequest(value: String) extends Command
+
+  final case class ClientResponse(currentState: String)
+
   val INITIAL_TERM = 0
 
   private val RESEND_LOG_TIMEOUT = FiniteDuration(1, TimeUnit.SECONDS)
@@ -49,6 +54,7 @@ class Leader(context: ActorContext[BaseCommand],
              leaderLog: ArrayBuffer[LogItem],
              leaderCluster: ArrayBuffer[ActorRef[BaseCommand]],
              leaderTerm: Int) extends BaseRaftBehavior[BaseCommand](context, leaderNodeId, leaderLog, leaderCluster) {
+
 
   context.log.info("{} is follower", nodeId)
   establishLeadership()
@@ -65,14 +71,44 @@ class Leader(context: ActorContext[BaseCommand],
   // Once AppendEntries succeeds, the follower’s log is consistent with the leader’s,
   // and it will remain that way for the rest of the term.
   private var nextIndices = Map[String, Int]()
+  private var pendingItems = Map[String, LogItem]()
 
   //TODO timers to repeat sending of log items, which have not been confirmed
 
-  override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = super.onMessage(msg)
+  override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
+    msg match {
+      case ClientRequest(value) =>
+        onClientRequest(value)
+        this
+      case AppendEntriesResponse(success, logItemUuid, nodeId) =>
+        onAppendEntriesResponse(success, logItemUuid, nodeId)
+        this
+      case _ =>
+        super.onMessage(msg)
+    }
+  }
 
   override def onSignal: PartialFunction[Signal, Behavior[BaseCommand]] = super.onSignal
 
   private def establishLeadership() = {
     getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self)))
+  }
+
+  private def onClientRequest(value: String) = {
+    val uuid = Uuid.get
+    pendingItems += uuid -> LogItem(leaderTerm, value)
+
+    val msg = AppendEntriesNewLog(
+      leaderInfo = LeaderInfo(leaderTerm, context.self),
+      previousLogItem = getPreviousLogItem,
+      newLogItem = value,
+      leaderCommit = 100500,
+      logItemUuid = uuid
+    )
+    getRestOfCluster().foreach(_ ! msg)
+  }
+
+  private def onAppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) = {
+
   }
 }
