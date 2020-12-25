@@ -1,9 +1,11 @@
 import java.util.concurrent.TimeUnit
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.behavior.Candidate
 import com.stakkato95.raft.behavior.Candidate.{RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.AppendEntriesHeartbeat
-import com.stakkato95.raft.behavior.{BaseCommand, Candidate, Follower, Leader}
+import com.stakkato95.raft.behavior.base.BaseCommand
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
@@ -35,10 +37,10 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       candidate ! VoteGranted
       candidate ! VoteGranted
 
-      val msg = AppendEntriesHeartbeat(
-        leaderTerm =  1,
+      val msg = AppendEntriesHeartbeat(LeaderInfo(
+        term = 1,
         leader = candidate.ref
-      )
+      ))
       follower1.expectMessage(msg)
       follower2.expectMessage(msg)
     }

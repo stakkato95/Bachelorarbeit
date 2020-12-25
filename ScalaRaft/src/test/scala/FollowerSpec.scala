@@ -3,10 +3,11 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
-import com.stakkato95.raft.behavior.Candidate.RequestVote
-import com.stakkato95.raft.behavior.Follower.AppendEntriesNewLog
+import com.stakkato95.raft.behavior.Candidate.{RequestVote, VoteGranted}
+import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
-import com.stakkato95.raft.behavior.{BaseCommand, Follower, Leader}
+import com.stakkato95.raft.behavior.base.BaseCommand
+import com.stakkato95.raft.behavior.{Follower, Leader}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
@@ -28,7 +29,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ))
 
       val msg = RequestVote(
-        candidateTerm = Leader.INITIAL_TERM,
+        candidateTerm = 1,
         candidate = follower.ref,
         lastLogItem = None
       )
@@ -116,9 +117,150 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ))
     }
 
-    //TODO SEND INFO ABOUT THE LATEST LEADER TO THIS "NON LEADER"
-    "???decline a new log item from Leader with outdated log" in {
+    "append new log items from an up-to-date Leader" in {
+      //TODO add a request to get current state of log
+    }
 
+    "ignore Candidate with an old term" in {
+      val currentLeader = createTestProbe[BaseCommand]()
+      val candidate = createTestProbe[BaseCommand]()
+
+      val nodeId = "node-1"
+      val followerInitialLog = ArrayBuffer[LogItem](
+        LogItem(1, "a"),
+        LogItem(2, "b"),
+        LogItem(3, "c"),
+      )
+      val leaderTerm = 3
+      val oldLeaderTerm = 3
+
+      val follower = spawn(Follower(
+        nodeId = nodeId,
+        timeout = FollowerSpec.TIMEOUT,
+        log = followerInitialLog,
+        cluster = ArrayBuffer(currentLeader.ref, candidate.ref)
+      ))
+
+      follower ! AppendEntriesHeartbeat(LeaderInfo(
+        term = leaderTerm,
+        leader = currentLeader.ref
+      ))
+
+      follower ! RequestVote(
+        candidateTerm = oldLeaderTerm,
+        candidate = candidate.ref,
+        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 2, leaderTerm = oldLeaderTerm))
+      )
+
+      candidate.expectNoMessage()
+    }
+
+    "ignore Candidate with an outdated log" in {
+      val currentLeader = createTestProbe[BaseCommand]()
+      val candidate = createTestProbe[BaseCommand]()
+
+      val nodeId = "node-1"
+      val followerInitialLog = ArrayBuffer[LogItem](
+        LogItem(1, "a"),
+        LogItem(2, "b"),
+        LogItem(3, "c"),
+      )
+      val leaderTerm = 3
+      val candidateTerm = 3
+
+      val follower = spawn(Follower(
+        nodeId = nodeId,
+        timeout = FollowerSpec.TIMEOUT,
+        log = followerInitialLog,
+        cluster = ArrayBuffer(currentLeader.ref, candidate.ref)
+      ))
+
+      follower ! AppendEntriesHeartbeat(LeaderInfo(
+        term = leaderTerm,
+        leader = currentLeader.ref
+      ))
+
+      follower ! RequestVote(
+        candidateTerm = candidateTerm,
+        candidate = candidate.ref,
+        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 2, leaderTerm = candidateTerm))
+      )
+
+      candidate.expectNoMessage()
+    }
+
+    "accept Candidate with an up-to-date log and a new term" in {
+      val currentLeader = createTestProbe[BaseCommand]()
+      val candidate1 = createTestProbe[BaseCommand]()
+
+      val nodeId = "node-1"
+      val leaderTerm = 3
+      val followerInitialLog = ArrayBuffer[LogItem](
+        LogItem(1, "a"),
+        LogItem(2, "b"),
+        LogItem(leaderTerm, "c"),
+      )
+      val candidateTerm = 4
+
+      val follower = spawn(Follower(
+        nodeId = nodeId,
+        timeout = FollowerSpec.TIMEOUT,
+        log = followerInitialLog,
+        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref)
+      ))
+
+      follower ! AppendEntriesHeartbeat(LeaderInfo(
+        term = leaderTerm,
+        leader = currentLeader.ref
+      ))
+
+      follower ! RequestVote(
+        candidateTerm = candidateTerm,
+        candidate = candidate1.ref,
+        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+      )
+      candidate1.expectMessage(VoteGranted)
+    }
+
+    "ignore one more Candidate in the same term" in {
+      val currentLeader = createTestProbe[BaseCommand]()
+      val candidate1 = createTestProbe[BaseCommand]()
+      val candidate2 = createTestProbe[BaseCommand]()
+
+      val nodeId = "node-1"
+      val leaderTerm = 3
+      val followerInitialLog = ArrayBuffer[LogItem](
+        LogItem(1, "a"),
+        LogItem(2, "b"),
+        LogItem(leaderTerm, "c"),
+      )
+      val candidateTerm = 4
+
+      val follower = spawn(Follower(
+        nodeId = nodeId,
+        timeout = FollowerSpec.TIMEOUT,
+        log = followerInitialLog,
+        cluster = ArrayBuffer(currentLeader.ref, candidate1.ref, candidate2.ref)
+      ))
+
+      follower ! AppendEntriesHeartbeat(LeaderInfo(
+        term = leaderTerm,
+        leader = currentLeader.ref
+      ))
+
+      follower ! RequestVote(
+        candidateTerm = candidateTerm,
+        candidate = candidate1.ref,
+        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+      )
+      candidate1.expectMessage(VoteGranted)
+
+      follower ! RequestVote(
+        candidateTerm = candidateTerm,
+        candidate = candidate2.ref,
+        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+      )
+      candidate2.expectNoMessage()
     }
   }
 }

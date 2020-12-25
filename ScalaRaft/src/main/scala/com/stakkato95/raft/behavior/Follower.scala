@@ -2,9 +2,10 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.behavior.Candidate.RequestVote
+import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
+import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
 
 import scala.collection.mutable.ArrayBuffer
@@ -55,6 +56,8 @@ class Follower(context: ActorContext[BaseCommand],
   context.log.info("{} is follower", followerNodeId)
   restartHeartbeatTimer()
 
+  private var grantedVote: Option[Int] = None
+
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
       case AppendEntriesHeartbeat(leaderInfo) =>
@@ -64,7 +67,7 @@ class Follower(context: ActorContext[BaseCommand],
         onAppendNewLogItem(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid)
         this
       case RequestVote(candidateTerm, candidate, lastLogItem) =>
-        //TODO Each server will vote for at most one candidate in a given term, on a first-come-first-served basis
+        onRequestVote(candidateTerm, candidate, lastLogItem)
         this
       case HeartbeatTimerElapsed =>
         onHeartbeatTimerElapsed()
@@ -92,12 +95,7 @@ class Follower(context: ActorContext[BaseCommand],
     //TODO Page 11
     //TODO To prevent this problem, servers disregard RequestVote RPCs when they believe a current leader exists.
     //TODO update, only if leader's term is higher?
-    val lastSeenTerm = lastLeader match {
-      case Some(LeaderInfo(term, _)) => term
-      case None => Leader.INITIAL_TERM
-    }
-
-    if (leaderInfo.term < lastSeenTerm) {
+    if (leaderInfo.term < getLastSeenTerm()) {
       return
     }
 
@@ -110,6 +108,29 @@ class Follower(context: ActorContext[BaseCommand],
     } else {
       log = log.init
       leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, followerNodeId)
+    }
+  }
+
+  private def onRequestVote(candidateTerm: Int, candidate: ActorRef[Command], lastLogItem: Option[LastLogItem]) = {
+    val lastLogItemsAreEqual = lastLogItem match {
+      case Some(item) => previousItemFromLeaderLogEqualsLastLogItem(item)
+      case None => true
+    }
+
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    //TODO
+    if (candidateTerm >= getLastSeenTerm() && lastLogItemsAreEqual && grantedVote.isEmpty) {
+      grantedVote = Some(candidateTerm)
+      candidate ! VoteGranted
     }
   }
 
@@ -129,5 +150,10 @@ class Follower(context: ActorContext[BaseCommand],
   private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: LastLogItem) = log match {
     case ArrayBuffer(i, _*) => previousLogItem.leaderTerm == log.last.leaderTerm && previousLogItem.index == log.length - 1
     case _ => true
+  }
+
+  private def getLastSeenTerm() = lastLeader match {
+    case Some(LeaderInfo(term, _)) => term
+    case None => Leader.INITIAL_TERM
   }
 }

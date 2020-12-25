@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft.LogItem
+import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -41,13 +42,14 @@ object Leader {
 
 
 class Leader(context: ActorContext[BaseCommand],
-             nodeId: String,
+             leaderNodeId: String,
              timers: TimerScheduler[BaseCommand],
              timeout: FiniteDuration,
-             log: ArrayBuffer[LogItem],
-             cluster: ArrayBuffer[ActorRef[BaseCommand]],
-             leaderTerm: Int) extends BaseRaftBehavior[BaseCommand](context, nodeId, log, cluster) {
+             leaderLog: ArrayBuffer[LogItem],
+             leaderCluster: ArrayBuffer[ActorRef[BaseCommand]],
+             leaderTerm: Int) extends BaseRaftBehavior[BaseCommand](context, leaderNodeId, leaderLog, leaderCluster) {
 
+  context.log.info("{} is follower", nodeId)
   establishLeadership()
 
   //index of the next log entry the leader will send to that follower.
@@ -70,6 +72,6 @@ class Leader(context: ActorContext[BaseCommand],
   override def onSignal: PartialFunction[Signal, Behavior[BaseCommand]] = super.onSignal
 
   private def establishLeadership() = {
-//    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(leaderTerm, context.self))
+    //    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(leaderTerm, context.self))
   }
 }

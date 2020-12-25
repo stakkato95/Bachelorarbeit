@@ -6,6 +6,7 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
+import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
 
 import scala.collection.mutable.ArrayBuffer
@@ -44,10 +45,14 @@ object Candidate {
   private val rnd = new Random()
 
   private val MAX_ELECTION_TIMEOUT = 3
+  private val MIN_ELECTION_TIMEOUT = 1
 
   def getElectionTimeout(): FiniteDuration = {
-    FiniteDuration((rnd.nextFloat() * MAX_ELECTION_TIMEOUT).toLong, TimeUnit.SECONDS)
+    val length = MIN_ELECTION_TIMEOUT + (rnd.nextFloat() * (MAX_ELECTION_TIMEOUT - MIN_ELECTION_TIMEOUT)).toLong
+    FiniteDuration(length, TimeUnit.SECONDS)
   }
+
+  private val TERM_NOT_SET = -1
 }
 
 class Candidate(context: ActorContext[BaseCommand],
@@ -58,11 +63,11 @@ class Candidate(context: ActorContext[BaseCommand],
                 candidateCluster: ArrayBuffer[ActorRef[BaseCommand]])
   extends BaseRaftBehavior[BaseCommand](context, nodeId, candidateLog, candidateCluster) {
 
-  context.log.info("{} is candidate", nodeId)
+  context.log.info("{} is candidate with election timeout {}", nodeId, electionTimeout)
   startElection()
   restartElectionTimer()
 
-  private var term: Int = _
+  private var term = Candidate.TERM_NOT_SET
   private var votes = 0
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
@@ -73,6 +78,8 @@ class Candidate(context: ActorContext[BaseCommand],
         onAppendEntries(leaderInfo)
       case AppendEntriesNewLog(leaderInfo, _, _, _, _) =>
         onAppendEntries(leaderInfo)
+      case ElectionTimerElapsed =>
+        this
     }
   }
 
@@ -84,9 +91,10 @@ class Candidate(context: ActorContext[BaseCommand],
   private def startElection() = {
     term = lastLeader match {
       case None => Leader.INITIAL_TERM + 1
-      case Some(LeaderInfo(t, _)) => t + 1
+      case Some(LeaderInfo(t, _)) if term == Candidate.TERM_NOT_SET => t + 1
+      case _ => term + 1
     }
-    votes += 1
+    votes = 1
 
     val lastItem = candidateLog match {
       case ArrayBuffer(_, _*) => Some(LastLogItem(candidateLog.size - 1, candidateLog.last.leaderTerm))

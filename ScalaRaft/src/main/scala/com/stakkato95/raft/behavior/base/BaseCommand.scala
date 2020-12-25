@@ -1,4 +1,4 @@
-package com.stakkato95.raft.behavior
+package com.stakkato95.raft.behavior.base
 
 import akka.actor.typed.ActorRef
 
