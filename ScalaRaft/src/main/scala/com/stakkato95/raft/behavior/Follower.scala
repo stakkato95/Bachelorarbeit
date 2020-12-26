@@ -6,7 +6,7 @@ import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -38,7 +38,7 @@ object Follower {
   final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo) extends Command
 
   final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
-                                       previousLogItem: Option[LastLogItem],
+                                       previousLogItem: Option[PreviousLogItem],
                                        newLogItem: String,
                                        leaderCommit: Int,
                                        logItemUuid: Option[String]) extends Command
@@ -97,7 +97,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onAppendNewLogItem(leaderInfo: LeaderInfo,
-                                 previousLogItem: Option[LastLogItem],
+                                 previousLogItem: Option[PreviousLogItem],
                                  newLogItem: String,
                                  leaderCommit: Int,
                                  logItemUuid: Option[String]): Unit = {
@@ -120,7 +120,7 @@ class Follower(context: ActorContext[BaseCommand],
     }
   }
 
-  private def onRequestVote(candidateTerm: Int, candidate: ActorRef[Command], lastLogItem: Option[LastLogItem]) = {
+  private def onRequestVote(candidateTerm: Int, candidate: ActorRef[Command], lastLogItem: Option[PreviousLogItem]) = {
     val lastLogItemsAreEqual = lastLogItem match {
       case item => previousItemFromLeaderLogEqualsLastLogItem(item)
       case None => true
@@ -156,7 +156,7 @@ class Follower(context: ActorContext[BaseCommand],
     lastLeader = Some(leaderInfo)
   }
 
-  private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: Option[LastLogItem]) = log match {
+  private def previousItemFromLeaderLogEqualsLastLogItem(previousLogItem: Option[PreviousLogItem]) = log match {
     case ArrayBuffer(i, _*) if previousLogItem.isDefined =>
       previousLogItem.get.leaderTerm == log.last.leaderTerm && previousLogItem.get.index == log.length - 1
     case _ => true

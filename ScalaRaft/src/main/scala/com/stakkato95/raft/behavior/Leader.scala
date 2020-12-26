@@ -8,7 +8,7 @@ import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntr
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.uuid.UuidProvider
-import com.stakkato95.raft.{DefaultUuid, LastLogItem, LeaderInfo, LogItem, PendingItem}
+import com.stakkato95.raft.{DefaultUuid, PreviousLogItem, LeaderInfo, LogItem, PendingItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -42,8 +42,7 @@ object Leader {
   final case class AppendEntriesResponse(success: Boolean,
                                          logItemUuid: Option[String],
                                          nodeId: String,
-                                         replyTo: ActorRef[BaseCommand],
-                                         extra: Int = 0) extends Command
+                                         replyTo: ActorRef[BaseCommand]) extends Command
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -96,8 +95,8 @@ class Leader(context: ActorContext[BaseCommand],
       case ClientRequest(value, replyTo) =>
         onClientRequest(value, replyTo)
         this
-      case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo, extra) =>
-        onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo, extra)
+      case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo) =>
+        onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo)
         this
       case _ =>
         super.onMessage(msg)
@@ -130,14 +129,13 @@ class Leader(context: ActorContext[BaseCommand],
   private def onAppendEntriesResponse(success: Boolean,
                                       logItemUuid: Option[String],
                                       nodeId: String,
-                                      replyTo: ActorRef[BaseCommand],
-                                      extra: Int): Unit = {
+                                      replyTo: ActorRef[BaseCommand]): Unit = {
     if (success) {
       logItemUuid match {
         case Some(uuid) =>
           onAppendEntriesResponseSuccess(uuid, nodeId, replyTo)
         case None =>
-          onAppendEntriesRetrySuccess(nodeId, replyTo, extra)
+          onAppendEntriesRetrySuccess(nodeId, replyTo)
       }
     } else {
       onAppendEntriesResponseFailure(replyTo)
@@ -162,37 +160,21 @@ class Leader(context: ActorContext[BaseCommand],
     }
   }
 
-  private def onAppendEntriesRetrySuccess(nodeId: String,
-                                          replyTo: ActorRef[BaseCommand],
-                                          extra: Int): Unit = {
-    if (nextIndices(replyTo) == log.size) {
+  private def onAppendEntriesRetrySuccess(nodeId: String, replyTo: ActorRef[BaseCommand]): Unit = {
+    if (nextIndices(replyTo) == log.size - 1) {
       return
     }
 
     val nextIndexForFollower = nextIndices(replyTo) + 1
     nextIndices += replyTo -> nextIndexForFollower
 
-    context.log.info("extra={} nextIndexForFollower={}", extra, nextIndexForFollower)
     sendCorrectingAppendEntries(replyTo, nextIndexForFollower)
   }
 
   private def onAppendEntriesResponseFailure(replyTo: ActorRef[BaseCommand]) = {
-    //TODO resend logic
     val nextIndexForFollower = nextIndices(replyTo) - 1
     nextIndices += replyTo -> nextIndexForFollower
 
-//    //previousIndex < nextIndexForFollower
-//    val previousIndex = nextIndices(replyTo) - 1
-//    replyTo ! AppendEntriesNewLog(
-//      leaderInfo = LeaderInfo(term = leaderTerm, leader = context.self),
-//      previousLogItem = Some(LastLogItem(
-//        index = previousIndex,
-//        leaderTerm = log(previousIndex).leaderTerm
-//      )),
-//      newLogItem = log(nextIndices(replyTo)).value,
-//      leaderCommit = leaderCommit,
-//      logItemUuid = None //uuid is not important, since success=false is received from one particular node
-//    )
     sendCorrectingAppendEntries(replyTo, nextIndexForFollower)
   }
 
@@ -201,7 +183,7 @@ class Leader(context: ActorContext[BaseCommand],
     val previousIndex = nextIndexForFollower - 1
     replyTo ! AppendEntriesNewLog(
       leaderInfo = LeaderInfo(term = leaderTerm, leader = context.self),
-      previousLogItem = Some(LastLogItem(
+      previousLogItem = Some(PreviousLogItem(
         index = previousIndex,
         leaderTerm = log(previousIndex).leaderTerm
       )),

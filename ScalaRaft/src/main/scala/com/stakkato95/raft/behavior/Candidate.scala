@@ -7,7 +7,7 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -38,7 +38,7 @@ object Candidate {
 
   final case class RequestVote(candidateTerm: Int,
                                candidate: ActorRef[Command],
-                               lastLogItem: Option[LastLogItem]) extends Command
+                               lastLogItem: Option[PreviousLogItem]) extends Command
 
   final object ElectionTimerElapsed extends Command
 

@@ -7,7 +7,7 @@ import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntr
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.BaseCommand
 import com.stakkato95.raft.uuid.Uuid
-import com.stakkato95.raft.{LastLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
@@ -50,7 +50,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         LogItem(2, "d"),
         LogItem(leaderTerm, "e"),
       )
-      val previousLogItem = LastLogItem(
+      val previousLogItem = PreviousLogItem(
         index = followerInitialLog.size - 1,
         leaderTerm = followerInitialLog.last.leaderTerm
       )
@@ -92,7 +92,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         LogItem(3, "c"),
       )
       val leaderCommit = 5
-      val previousLogItem = LastLogItem(
+      val previousLogItem = PreviousLogItem(
         index = leaderCommit,
         leaderTerm = leaderTerm
       )
@@ -155,7 +155,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! RequestVote(
         candidateTerm = oldLeaderTerm,
         candidate = candidate.ref,
-        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 2, leaderTerm = oldLeaderTerm))
+        lastLogItem = Some(PreviousLogItem(index = followerInitialLog.size - 2, leaderTerm = oldLeaderTerm))
       )
 
       candidate.expectNoMessage()
@@ -190,7 +190,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! RequestVote(
         candidateTerm = candidateTerm,
         candidate = candidate.ref,
-        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 2, leaderTerm = candidateTerm))
+        lastLogItem = Some(PreviousLogItem(index = followerInitialLog.size - 2, leaderTerm = candidateTerm))
       )
 
       candidate.expectNoMessage()
@@ -225,7 +225,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! RequestVote(
         candidateTerm = candidateTerm,
         candidate = candidate1.ref,
-        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+        lastLogItem = Some(PreviousLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
       )
       candidate1.expectMessage(VoteGranted)
     }
@@ -260,14 +260,14 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! RequestVote(
         candidateTerm = candidateTerm,
         candidate = candidate1.ref,
-        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+        lastLogItem = Some(PreviousLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
       )
       candidate1.expectMessage(VoteGranted)
 
       follower ! RequestVote(
         candidateTerm = candidateTerm,
         candidate = candidate2.ref,
-        lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
+        lastLogItem = Some(PreviousLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
       )
       candidate2.expectNoMessage()
     }
