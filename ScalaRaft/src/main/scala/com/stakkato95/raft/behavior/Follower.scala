@@ -110,14 +110,23 @@ class Follower(context: ActorContext[BaseCommand],
 
     updateLastLeader(leaderInfo)
 
-    if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
-      log += newLogItem
-      applyToSimpleStateMachine(log.last)
-      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId, context.self)
+    if (log.isEmpty) {
+      previousLogItem match {
+        case None =>
+          //start of the log is reached, so confirm first element to Leader
+          applyLogItem(leaderInfo, newLogItem, logItemUuid)
+        case _ =>
+          //reach the very beginning of the log at Leader and force it to resend log starting from the first item
+          leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
+      }
     } else {
-      log.remove(log.size - 1)
-      unapplyFromSimpleStateMachine()
-      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
+      if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
+        applyLogItem(leaderInfo, newLogItem, logItemUuid)
+      } else {
+        log.remove(log.size - 1)
+        unapplyFromSimpleStateMachine()
+        leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
+      }
     }
   }
 
@@ -166,5 +175,13 @@ class Follower(context: ActorContext[BaseCommand],
   private def getLastSeenTerm() = lastLeader match {
     case Some(LeaderInfo(term, _)) => term
     case None => Leader.INITIAL_TERM
+  }
+
+  private def applyLogItem(leaderInfo: LeaderInfo,
+                           newLogItem: LogItem,
+                           logItemUuid: Option[String]): Unit = {
+    log += newLogItem
+    applyToSimpleStateMachine(log.last)
+    leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId, context.self)
   }
 }

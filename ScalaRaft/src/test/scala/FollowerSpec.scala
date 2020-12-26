@@ -317,14 +317,12 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! appendNewItem
-      Thread.sleep(1500) //TODO resolve
       leaderCommit = 3
 
 
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
       ////////////////////////////////////////////////////////////
-      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(1, "h")))
       val followerUnsuccessful = AppendEntriesResponse(
         success = false,
         logItemUuid = None,
@@ -332,6 +330,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         replyTo = follower.ref
       )
       leader.expectMessage(followerUnsuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(1, "h")))
 
 
       // Leader sends retry with "LogItem(2, "b")" as previous and "c" as new log item
@@ -343,7 +342,6 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! retry1
-      Thread.sleep(1500) //TODO resolve
 
 
       ////////////////////////////////////////////////////////////
@@ -393,6 +391,147 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
 
       ////////////////////////////////////////////////////////////
+      // Follower log should be consistent
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerSuccessful)
+      log should ===(leaderLog)
+    }
+
+    "be brought by Leader into consistent state if Follower's log is empty" in {
+      val leader = createTestProbe[BaseCommand]()
+      val follower2 = createTestProbe[BaseCommand]()
+
+      val leaderTerm = 4
+      val leaderInfo = LeaderInfo(leaderTerm, leader.ref)
+      val leaderLog = ArrayBuffer(
+        LogItem(1, "a"),
+        LogItem(2, "b"),
+        LogItem(3, "c")
+      )
+
+      val log = ArrayBuffer[LogItem]()
+      val follower = spawn(Follower(
+        nodeId = FollowerSpec.NODE_ID,
+        timeout = FiniteDuration(60, TimeUnit.SECONDS),
+        log = log,
+        cluster = ArrayBuffer(leader.ref, follower2.ref),
+        stateMachineValue = ""
+      ))
+
+      //establish leadership
+      follower ! AppendEntriesHeartbeat(leaderInfo)
+
+      // Client sends request to Leader with new item "d"
+      val newValue = "d"
+      leaderLog += LogItem(4, newValue)
+
+
+      ////////////////////////////////////////////////////////////
+      // Leader start to replicate. It should save new item to its own log, replicate it to follower2 and follower
+      ////////////////////////////////////////////////////////////
+      var leaderCommit = 2
+      val appendNewItem = AppendEntriesNewLog(
+        leaderInfo = leaderInfo,
+        previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue),
+        leaderCommit = leaderCommit,
+        logItemUuid = None //for test purposes uuid is irrelevant
+      )
+      follower ! appendNewItem
+      leaderCommit = 3
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should remove last item from log and send AppendEntriesResponse(success = false)
+      ////////////////////////////////////////////////////////////
+      val followerUnsuccessful = AppendEntriesResponse(
+        success = false,
+        logItemUuid = None,
+        nodeId = FollowerSpec.NODE_ID,
+        replyTo = follower.ref
+      )
+      leader.expectMessage(followerUnsuccessful)
+      log.size should ===(0)
+
+
+      // Leader sends retry with "LogItem(2, "b")" as previous and "c" as new log item
+      val retry1 = AppendEntriesNewLog(
+        leaderInfo = leaderInfo,
+        previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
+        newLogItem = LogItem(3, "c"),
+        leaderCommit = leaderCommit,
+        logItemUuid = None //for test purposes uuid is irrelevant
+      )
+      follower ! retry1
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should remove last item from log and send AppendEntriesResponse(success = false)
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerUnsuccessful)
+      log.size should ===(0)
+
+
+      // Leader sends retry with "LogItem(1, "a")" as previous and "b" as new log item
+      val retry2 = retry1.copy(
+        previousLogItem = Some(PreviousLogItem(index = 0, leaderTerm = 1)),
+        newLogItem = LogItem(2, "b")
+      )
+      follower ! retry2
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should remove last item from log and send AppendEntriesResponse(success = false)
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerUnsuccessful)
+      log.size should ===(0)
+
+
+      // Leader sends retry with "None" as previous and "a" as new log item
+      follower ! retry1.copy(previousLogItem = None, newLogItem = LogItem(1, "a"))
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should send AppendEntriesResponse(success = true) and append LogItem(1, "a") to its log
+      ////////////////////////////////////////////////////////////
+      val followerSuccessful = AppendEntriesResponse(
+        success = true,
+        logItemUuid = None,
+        nodeId = FollowerSpec.NODE_ID,
+        replyTo = follower.ref
+      )
+      leader.expectMessage(followerSuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a")))
+
+
+      // Leader sends retry with "LogItem(1, "a")" as previous and "b" as new log item
+      follower ! retry2
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should send AppendEntriesResponse(success = true) and append LogItem(2, "b") to its log
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerSuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b")))
+
+
+      // Leader sends retry with "LogItem(2, "b")" as previous and "c" as new log item
+      follower ! retry1
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should send AppendEntriesResponse(success = true) and append LogItem(3, "c") to its log
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerSuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b"), LogItem(3, "c")))
+
+
+      // Leader sends retry with "LogItem(3, "c")" as previous and "appendNewItem" as new log item
+      follower ! appendNewItem
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should send AppendEntriesResponse(success = true) and append LogItem(4, "d") to its log
       // Follower log should be consistent
       ////////////////////////////////////////////////////////////
       leader.expectMessage(followerSuccessful)
