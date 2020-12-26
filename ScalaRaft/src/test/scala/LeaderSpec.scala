@@ -207,19 +207,56 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower2.expectMessage(retrySecond)
       followerLog.remove(followerLog.size - 1) //Follower removes diverged item
 
+
+
+
       ///////////////////////////////////////////////////////////////////////////////////////////
       // Second Follower FINALLY responds with success=TRUE, i.e. last log item on this Follower
       // (now it is also the first item, because Follower removes diverged items)
-      // is EQUAL to the FIRST item Leader
+      // is EQUAL to the FIRST on item Leader
       ///////////////////////////////////////////////////////////////////////////////////////////
       // prove it by comparing logs
       log(log.size - 4) should ===(followerLog.last)
+      followerLog += log(log.size - 3) //append second item from Leader to the log of the follower
+      log.take(followerLog.size) should ===(followerLog)
       leader ! AppendEntriesResponse(
         success = true,
         logItemUuid = None,
         nodeId = "follower-2",
-        replyTo = follower2.ref
+        replyTo = follower2.ref,
+        extra = -2
       )
+      Thread.sleep(1500)
+
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Second Follower responds with success=true, i.e. last log item on this Follower
+      // is equal to the PRE-penultimate item on Leader
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      followerLog += log(log.size - 2) //append second item from Leader to the log of the follower
+      log.take(followerLog.size) should ===(followerLog)
+      leader ! AppendEntriesResponse(
+        success = true,
+        logItemUuid = None,
+        nodeId = "follower-2",
+        replyTo = follower2.ref,
+        extra = -1
+      )
+
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Second Follower responds with success=true, i.e. last log item on this Follower
+      // is equal to the PRE-penultimate item on Leader
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      followerLog += log(log.size - 1) //append second item from Leader to the log of the follower
+      log should ===(followerLog)
+      leader ! AppendEntriesResponse(
+        success = true,
+        logItemUuid = None,
+        nodeId = "follower-2",
+        replyTo = follower2.ref,
+        extra = 1
+      )
+
+      follower2.expectNoMessage()
     }
   }
 }

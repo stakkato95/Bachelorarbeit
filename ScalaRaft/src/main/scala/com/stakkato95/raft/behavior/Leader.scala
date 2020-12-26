@@ -42,7 +42,8 @@ object Leader {
   final case class AppendEntriesResponse(success: Boolean,
                                          logItemUuid: Option[String],
                                          nodeId: String,
-                                         replyTo: ActorRef[BaseCommand]) extends Command
+                                         replyTo: ActorRef[BaseCommand],
+                                         extra: Int = 0) extends Command
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -95,8 +96,8 @@ class Leader(context: ActorContext[BaseCommand],
       case ClientRequest(value, replyTo) =>
         onClientRequest(value, replyTo)
         this
-      case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo) =>
-        onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo)
+      case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo, extra) =>
+        onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo, extra)
         this
       case _ =>
         super.onMessage(msg)
@@ -129,16 +130,14 @@ class Leader(context: ActorContext[BaseCommand],
   private def onAppendEntriesResponse(success: Boolean,
                                       logItemUuid: Option[String],
                                       nodeId: String,
-                                      replyTo: ActorRef[BaseCommand]) = {
+                                      replyTo: ActorRef[BaseCommand],
+                                      extra: Int): Unit = {
     if (success) {
-      val nextIndexForFollower = nextIndices(replyTo) + 1
-      nextIndices += replyTo -> nextIndexForFollower
-
       logItemUuid match {
         case Some(uuid) =>
           onAppendEntriesResponseSuccess(uuid, nodeId, replyTo)
         case None =>
-          onAppendEntriesRetrySuccess(nodeId, replyTo)
+          onAppendEntriesRetrySuccess(nodeId, replyTo, extra)
       }
     } else {
       onAppendEntriesResponseFailure(replyTo)
@@ -148,6 +147,9 @@ class Leader(context: ActorContext[BaseCommand],
   private def onAppendEntriesResponseSuccess(logItemUuid: String,
                                              nodeId: String,
                                              replyTo: ActorRef[BaseCommand]) = {
+    val nextIndexForFollower = nextIndices(replyTo) + 1
+    nextIndices += replyTo -> nextIndexForFollower
+
     pendingItems(logItemUuid).votes += 1
 
     if (pendingItems(logItemUuid).votes >= quorumSize) {
@@ -161,7 +163,8 @@ class Leader(context: ActorContext[BaseCommand],
   }
 
   private def onAppendEntriesRetrySuccess(nodeId: String,
-                                          replyTo: ActorRef[BaseCommand]): Unit = {
+                                          replyTo: ActorRef[BaseCommand],
+                                          extra: Int): Unit = {
     if (nextIndices(replyTo) == log.size) {
       return
     }
@@ -169,6 +172,7 @@ class Leader(context: ActorContext[BaseCommand],
     val nextIndexForFollower = nextIndices(replyTo) + 1
     nextIndices += replyTo -> nextIndexForFollower
 
+    context.log.info("extra={} nextIndexForFollower={}", extra, nextIndexForFollower)
     sendCorrectingAppendEntries(replyTo, nextIndexForFollower)
   }
 
