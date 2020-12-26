@@ -68,7 +68,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
         previousLogItem = Some(previousLogItem),
-        newLogItem = "new",
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = "new"),
         leaderCommit = leaderCommit,
         logItemUuid = Some(logItemUuid)
       )
@@ -109,7 +109,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
         previousLogItem = Some(previousLogItem),
-        newLogItem = "new",
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = "new"),
         leaderCommit = leaderCommit,
         logItemUuid = Some(logItemUuid)
       )
@@ -291,7 +291,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       )
       val follower = spawn(Follower(
         nodeId = FollowerSpec.NODE_ID,
-        timeout = FollowerSpec.TIMEOUT,
+        timeout = FiniteDuration(60, TimeUnit.SECONDS),
         log = log,
         cluster = ArrayBuffer(leader.ref, follower2.ref),
         stateMachineValue = "ahi"
@@ -301,8 +301,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower ! AppendEntriesHeartbeat(leaderInfo)
 
       // Client sends request to Leader with new item "d"
-      val newItem = "d"
-      leaderLog += LogItem(4, newItem)
+      val newValue = "d"
+      leaderLog += LogItem(4, newValue)
 
 
       ////////////////////////////////////////////////////////////
@@ -312,13 +312,14 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val appendNewItem = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
-        newLogItem = newItem,
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue),
         leaderCommit = leaderCommit,
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! appendNewItem
       Thread.sleep(1500) //TODO resolve
       leaderCommit = 3
+
 
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
@@ -337,7 +338,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val retry1 = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
-        newLogItem = "c",
+        newLogItem = LogItem(3, "c"),
         leaderCommit = leaderCommit,
         logItemUuid = None //for test purposes uuid is irrelevant
       )
@@ -348,45 +349,54 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
       ////////////////////////////////////////////////////////////
-      log should ===(ArrayBuffer(LogItem(1, "a")))
       leader.expectMessage(followerUnsuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a")))
 
 
       // Leader sends retry with "LogItem(1, "a")" as previous and "b" as new log item
       val retry2 = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 0, leaderTerm = 1)),
-        newLogItem = "b",
+        newLogItem = LogItem(2, "b"),
         leaderCommit = leaderCommit,
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! retry2
-      Thread.sleep(1500) //TODO resolve
 
 
       ////////////////////////////////////////////////////////////
-      // Follower should append "b" to the log and send AppendEntriesResponse(success = false)
+      // Follower should send AppendEntriesResponse(success = true) and append LogItem(2, "b") to its log
       ////////////////////////////////////////////////////////////
-      //TODO ????
-//      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b")))
-//      val followerSuccessful = AppendEntriesResponse(
-//        success = true,
-//        logItemUuid = None,
-//        nodeId = FollowerSpec.NODE_ID,
-//        replyTo = follower.ref
-//      )
-//      leader.expectMessage(followerSuccessful)
-//
-//
-//      // Leader sends retry with "LogItem(2, "b")" as previous and "c" as new log item
-//      follower ! retry1
-//
-//
-//      ////////////////////////////////////////////////////////////
-//      // Follower should append "c" to the log and send AppendEntriesResponse(success = false)
-//      ////////////////////////////////////////////////////////////
-//      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b"), LogItem(3, "c")))
-//      leader.expectMessage(followerSuccessful)
+      val followerSuccessful = AppendEntriesResponse(
+        success = true,
+        logItemUuid = None,
+        nodeId = FollowerSpec.NODE_ID,
+        replyTo = follower.ref
+      )
+      leader.expectMessage(followerSuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b")))
+
+
+      // Leader sends retry with "LogItem(2, "b")" as previous and "c" as new log item
+      follower ! retry1
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower should send AppendEntriesResponse(success = false) and append LogItem(3, "c") to its log
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerSuccessful)
+      log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b"), LogItem(3, "c")))
+
+
+      // Leader sends appendNewItem with "LogItem(3, "c")" as previous and "d" as new log item
+      follower ! appendNewItem
+
+
+      ////////////////////////////////////////////////////////////
+      // Follower log should be consistent
+      ////////////////////////////////////////////////////////////
+      leader.expectMessage(followerSuccessful)
+      log should ===(leaderLog)
     }
   }
 }

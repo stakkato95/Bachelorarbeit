@@ -39,7 +39,7 @@ object Follower {
 
   final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
                                        previousLogItem: Option[PreviousLogItem],
-                                       newLogItem: String,
+                                       newLogItem: LogItem,
                                        leaderCommit: Int,
                                        logItemUuid: Option[String]) extends Command
 
@@ -98,7 +98,7 @@ class Follower(context: ActorContext[BaseCommand],
 
   private def onAppendNewLogItem(leaderInfo: LeaderInfo,
                                  previousLogItem: Option[PreviousLogItem],
-                                 newLogItem: String,
+                                 newLogItem: LogItem,
                                  leaderCommit: Int,
                                  logItemUuid: Option[String]): Unit = {
     //TODO Page 11
@@ -111,8 +111,8 @@ class Follower(context: ActorContext[BaseCommand],
     updateLastLeader(leaderInfo)
 
     if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
-      log += LogItem(leaderInfo.term, newLogItem)
-      applyToSimpleStateMachine(log(leaderCommit))
+      log += newLogItem
+      applyToSimpleStateMachine(log.last)
       leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId, context.self)
     } else {
       log.remove(log.size - 1)

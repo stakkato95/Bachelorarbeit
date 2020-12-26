@@ -117,7 +117,7 @@ class Leader(context: ActorContext[BaseCommand],
     val msg = AppendEntriesNewLog(
       leaderInfo = LeaderInfo(leaderTerm, context.self),
       previousLogItem = previousLogItem,
-      newLogItem = value,
+      newLogItem = logItem,
       leaderCommit = leaderCommit,
       logItemUuid = Some(uuid)
     )
@@ -187,7 +187,7 @@ class Leader(context: ActorContext[BaseCommand],
         index = previousIndex,
         leaderTerm = log(previousIndex).leaderTerm
       )),
-      newLogItem = log(nextIndices(replyTo)).value,
+      newLogItem = log(nextIndices(replyTo)),
       leaderCommit = leaderCommit,
       logItemUuid = None //uuid is not important, since success=false is received from one particular node
     )

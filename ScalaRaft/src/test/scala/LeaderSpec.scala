@@ -113,8 +113,8 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower1.expectMessageType[AppendEntriesHeartbeat]
       follower2.expectMessageType[AppendEntriesHeartbeat]
 
-      val newLogItem = "d"
-      leader ! ClientRequest(newLogItem, client.ref)
+      val newValue = "d"
+      leader ! ClientRequest(newValue, client.ref)
 
       ///////////////////////////////////////////////////////////////////////////////////////////
       // Leader starts replicating log to followers
@@ -123,7 +123,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val appendAntriesMsg = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
-        newLogItem = newLogItem,
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue) ,
         leaderCommit = 2,
         logItemUuid = Some(LeaderSpec.UUID)
       )
@@ -146,7 +146,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower1.expectNoMessage()
       //client should receive current state of replicated state machine,
       //since data is already replicated to 2 nodes (leader & follower1)
-      client.expectMessage(ClientResponse(stateMachineValue + newLogItem))
+      client.expectMessage(ClientResponse(stateMachineValue + newValue))
 
       ///////////////////////////////////////////////////////////////////////////////////////////
       // Second Follower responds with success=false, i.e. last log item on this Follower
@@ -169,7 +169,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val retryFirst = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
-        newLogItem = "c",
+        newLogItem = log(log.size - 2),
         leaderCommit = leaderCommitWhenRetrying,
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
@@ -189,7 +189,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val retrySecond = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 0, leaderTerm = 1)),
-        newLogItem = "b",
+        newLogItem = log(log.size - 3),
         leaderCommit = leaderCommitWhenRetrying,
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
