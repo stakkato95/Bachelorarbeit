@@ -113,10 +113,11 @@ class Follower(context: ActorContext[BaseCommand],
     if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
       log += LogItem(leaderInfo.term, newLogItem)
       applyToSimpleStateMachine(log(leaderCommit))
-      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, followerNodeId, context.self)
+      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId, context.self)
     } else {
-      log = log.init
-      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, followerNodeId, context.self)
+      log.remove(log.size - 1)
+      unapplyFromSimpleStateMachine()
+      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
     }
   }
 

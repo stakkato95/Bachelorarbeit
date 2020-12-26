@@ -26,6 +26,10 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
     currentStateMachineValue += item.value
   }
 
+  final protected def unapplyFromSimpleStateMachine() = {
+    currentStateMachineValue = currentStateMachineValue.substring(0, currentStateMachineValue.size - 1)
+  }
+
   final protected def quorumSize: Int = {
     cluster.size / 2 + 1
   }

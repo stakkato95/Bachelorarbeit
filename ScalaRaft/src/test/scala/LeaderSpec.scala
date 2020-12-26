@@ -88,8 +88,8 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val onlyFirstItemIsSame = LogItem(1, "a")
       val followerLog = ArrayBuffer(
         onlyFirstItemIsSame,
-        LogItem(2, "h"),
-        LogItem(3, "i"),
+        LogItem(1, "h"),
+        LogItem(2, "i"),
       )
 
       val leaderTerm = 4
