@@ -70,13 +70,14 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         previousLogItem = Some(previousLogItem),
         newLogItem = "new",
         leaderCommit = leaderCommit,
-        logItemUuid = logItemUuid
+        logItemUuid = Some(logItemUuid)
       )
 
       leader.expectMessage(AppendEntriesResponse(
         success = true,
-        logItemUuid = logItemUuid,
-        nodeId = nodeId
+        logItemUuid = Some(logItemUuid),
+        nodeId = nodeId,
+        replyTo = follower.ref
       ))
     }
 
@@ -110,13 +111,14 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         previousLogItem = Some(previousLogItem),
         newLogItem = "new",
         leaderCommit = leaderCommit,
-        logItemUuid = logItemUuid
+        logItemUuid = Some(logItemUuid)
       )
 
       leader.expectMessage(AppendEntriesResponse(
         success = false,
-        logItemUuid = logItemUuid,
-        nodeId = nodeId
+        logItemUuid = Some(logItemUuid),
+        nodeId = nodeId,
+        replyTo = follower.ref
       ))
     }
 
@@ -268,6 +270,10 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         lastLogItem = Some(LastLogItem(index = followerInitialLog.size - 1, leaderTerm = leaderTerm))
       )
       candidate2.expectNoMessage()
+    }
+
+    "be brought by Leader into consistent state if Follower's log is diverged" in {
+      //TODO
     }
   }
 }

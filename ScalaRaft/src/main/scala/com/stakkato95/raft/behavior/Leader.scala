@@ -8,7 +8,7 @@ import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntr
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.uuid.UuidProvider
-import com.stakkato95.raft.{DefaultUuid, LeaderInfo, LogItem, PendingItem}
+import com.stakkato95.raft.{DefaultUuid, LastLogItem, LeaderInfo, LogItem, PendingItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -39,7 +39,10 @@ object Leader {
 
   trait Command extends BaseCommand
 
-  final case class AppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) extends Command
+  final case class AppendEntriesResponse(success: Boolean,
+                                         logItemUuid: Option[String],
+                                         nodeId: String,
+                                         replyTo: ActorRef[BaseCommand]) extends Command
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -78,9 +81,9 @@ class Leader(context: ActorContext[BaseCommand],
   // in the follower’s log and appends entries from the leader’s log (if any).
   // Once AppendEntries succeeds, the follower’s log is consistent with the leader’s,
   // and it will remain that way for the rest of the term.
-  private var nextIndices = Map[String, Int]()
+  private var nextIndices: Map[ActorRef[BaseCommand], Int] = cluster.map((_, log.size)).toMap
   private var pendingItems = Map[String, PendingItem]()
-  private var leaderCommit = 0
+  private var leaderCommit = log.size - 1
 
   context.log.info("{} is follower", nodeId)
   establishLeadership()
@@ -92,8 +95,8 @@ class Leader(context: ActorContext[BaseCommand],
       case ClientRequest(value, replyTo) =>
         onClientRequest(value, replyTo)
         this
-      case AppendEntriesResponse(success, logItemUuid, nodeId) =>
-        onAppendEntriesResponse(success, logItemUuid, nodeId)
+      case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo) =>
+        onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo)
         this
       case _ =>
         super.onMessage(msg)
@@ -110,32 +113,97 @@ class Leader(context: ActorContext[BaseCommand],
     val uuid = uuidProvider.get
     val logItem = LogItem(leaderTerm, value)
     pendingItems += uuid -> PendingItem(logItem, 1, replyTo)
-    log += logItem
 
     val msg = AppendEntriesNewLog(
       leaderInfo = LeaderInfo(leaderTerm, context.self),
       previousLogItem = previousLogItem,
       newLogItem = value,
       leaderCommit = leaderCommit,
-      logItemUuid = uuid
+      logItemUuid = Some(uuid)
     )
+
+    log += logItem
     getRestOfCluster().foreach(_ ! msg)
   }
 
-  private def onAppendEntriesResponse(success: Boolean, logItemUuid: String, nodeId: String) = {
+  private def onAppendEntriesResponse(success: Boolean,
+                                      logItemUuid: Option[String],
+                                      nodeId: String,
+                                      replyTo: ActorRef[BaseCommand]) = {
     if (success) {
-      pendingItems(logItemUuid).votes += 1
+      val nextIndexForFollower = nextIndices(replyTo) + 1
+      nextIndices += replyTo -> nextIndexForFollower
 
-      if (pendingItems(logItemUuid).votes >= quorumSize) {
-        val pendingItem = pendingItems(logItemUuid)
-        pendingItems -= logItemUuid
-        applyToSimpleStateMachine(pendingItem.logItem)
-        leaderCommit += 1
-
-        pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
+      logItemUuid match {
+        case Some(uuid) =>
+          onAppendEntriesResponseSuccess(uuid, nodeId, replyTo)
+        case None =>
+          onAppendEntriesRetrySuccess(nodeId, replyTo)
       }
     } else {
-      //TODO resend logic
+      onAppendEntriesResponseFailure(replyTo)
     }
+  }
+
+  private def onAppendEntriesResponseSuccess(logItemUuid: String,
+                                             nodeId: String,
+                                             replyTo: ActorRef[BaseCommand]) = {
+    pendingItems(logItemUuid).votes += 1
+
+    if (pendingItems(logItemUuid).votes >= quorumSize) {
+      val pendingItem = pendingItems(logItemUuid)
+      pendingItems -= logItemUuid
+      applyToSimpleStateMachine(pendingItem.logItem)
+      leaderCommit += 1
+
+      pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
+    }
+  }
+
+  private def onAppendEntriesRetrySuccess(nodeId: String,
+                                          replyTo: ActorRef[BaseCommand]): Unit = {
+    if (nextIndices(replyTo) == log.size) {
+      return
+    }
+
+    val nextIndexForFollower = nextIndices(replyTo) + 1
+    nextIndices += replyTo -> nextIndexForFollower
+
+    sendCorrectingAppendEntries(replyTo, nextIndexForFollower)
+  }
+
+  private def onAppendEntriesResponseFailure(replyTo: ActorRef[BaseCommand]) = {
+    //TODO resend logic
+    val nextIndexForFollower = nextIndices(replyTo) - 1
+    nextIndices += replyTo -> nextIndexForFollower
+
+//    //previousIndex < nextIndexForFollower
+//    val previousIndex = nextIndices(replyTo) - 1
+//    replyTo ! AppendEntriesNewLog(
+//      leaderInfo = LeaderInfo(term = leaderTerm, leader = context.self),
+//      previousLogItem = Some(LastLogItem(
+//        index = previousIndex,
+//        leaderTerm = log(previousIndex).leaderTerm
+//      )),
+//      newLogItem = log(nextIndices(replyTo)).value,
+//      leaderCommit = leaderCommit,
+//      logItemUuid = None //uuid is not important, since success=false is received from one particular node
+//    )
+    sendCorrectingAppendEntries(replyTo, nextIndexForFollower)
+  }
+
+  private def sendCorrectingAppendEntries(replyTo: ActorRef[BaseCommand], nextIndexForFollower: Int): Unit = {
+    //previousIndex < nextIndexForFollower
+    val previousIndex = nextIndexForFollower - 1
+    replyTo ! AppendEntriesNewLog(
+      leaderInfo = LeaderInfo(term = leaderTerm, leader = context.self),
+      previousLogItem = Some(LastLogItem(
+        index = previousIndex,
+        leaderTerm = log(previousIndex).leaderTerm
+      )),
+      newLogItem = log(nextIndices(replyTo)).value,
+      leaderCommit = leaderCommit,
+      logItemUuid = None //uuid is not important, since success=false is received from one particular node
+    )
   }
 }

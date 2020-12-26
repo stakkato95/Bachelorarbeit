@@ -41,7 +41,7 @@ object Follower {
                                        previousLogItem: Option[LastLogItem],
                                        newLogItem: String,
                                        leaderCommit: Int,
-                                       logItemUuid: String) extends Command
+                                       logItemUuid: Option[String]) extends Command
 
   private final object HeartbeatTimerElapsed extends Command
 
@@ -100,7 +100,7 @@ class Follower(context: ActorContext[BaseCommand],
                                  previousLogItem: Option[LastLogItem],
                                  newLogItem: String,
                                  leaderCommit: Int,
-                                 logItemUuid: String): Unit = {
+                                 logItemUuid: Option[String]): Unit = {
     //TODO Page 11
     //TODO To prevent this problem, servers disregard RequestVote RPCs when they believe a current leader exists.
     //TODO update, only if leader's term is higher?
@@ -113,10 +113,10 @@ class Follower(context: ActorContext[BaseCommand],
     if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
       log += LogItem(leaderInfo.term, newLogItem)
       applyToSimpleStateMachine(log(leaderCommit))
-      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, followerNodeId)
+      leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, followerNodeId, context.self)
     } else {
       log = log.init
-      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, followerNodeId)
+      leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, followerNodeId, context.self)
     }
   }
 
