@@ -115,8 +115,11 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       val newLogItem = "d"
       leader ! ClientRequest(newLogItem, client.ref)
-      follower1.awaitAssert({}, FiniteDuration(2, TimeUnit.SECONDS))
+      Thread.sleep(1500) //TODO resolve "sleep" hack
 
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Leader starts replicating log to followers
+      ///////////////////////////////////////////////////////////////////////////////////////////
       //"- 2" for "previousIndexWhenReplicating" because at this point "d" is already appended to log
       val previousIndexWhenReplicating = log.size - 2
       //"- 2" for "leaderCommitWhenReplicating" because "d" is not yet committed to the log,
@@ -138,6 +141,10 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower1.expectMessage(appendEntriesMsg)
       follower2.expectMessage(appendEntriesMsg)
 
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // First Follower responds with success=true, i.e. successfully replicated
+      // It means that Leader can now apply item to its state machine an make it committed (increment commitIndex)
+      ///////////////////////////////////////////////////////////////////////////////////////////
       leader ! AppendEntriesResponse(
         success = true,
         logItemUuid = Some(LeaderSpec.UUID),
@@ -147,6 +154,12 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       follower1.expectNoMessage()
       client.expectMessage(ClientResponse(stateMachineValue + newLogItem))
 
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Second Follower responds with success=false, i.e. last log item on this Follower
+      // is not equal to the PRE-penultimate item on Leader
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // prove it by comparing logs
+      log(log.size - 2) should !==(followerLog.last)
       val failedAppendEntriesMsg = AppendEntriesResponse(
         success = false,
         logItemUuid = Some(LeaderSpec.UUID),
@@ -170,7 +183,14 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
       follower2.expectMessage(retryFirst)
+      followerLog.remove(followerLog.size - 1) //Follower removes diverged item
 
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Second Follower AGAIN responds with success=false, i.e. last log item on this Follower
+      // is STILL not equal to the PRE-PRE-penultimate item last on Leader
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // prove it by comparing logs
+      log(log.size - 3) should !==(followerLog.last)
       leader ! failedAppendEntriesMsg
 
       val previousIndexSecondRetry = log.size - 4
@@ -185,13 +205,21 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
       follower2.expectMessage(retrySecond)
+      followerLog.remove(followerLog.size - 1) //Follower removes diverged item
 
-//      leader ! AppendEntriesResponse(
-//        success = true,
-//        logItemUuid = None,
-//        nodeId = "follower-2",
-//        replyTo = follower2.ref
-//      )
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // Second Follower FINALLY responds with success=TRUE, i.e. last log item on this Follower
+      // (now it is also the first item, because Follower removes diverged items)
+      // is EQUAL to the FIRST item Leader
+      ///////////////////////////////////////////////////////////////////////////////////////////
+      // prove it by comparing logs
+      log(log.size - 4) should ===(followerLog.last)
+      leader ! AppendEntriesResponse(
+        success = true,
+        logItemUuid = None,
+        nodeId = "follower-2",
+        replyTo = follower2.ref
+      )
     }
   }
 }
