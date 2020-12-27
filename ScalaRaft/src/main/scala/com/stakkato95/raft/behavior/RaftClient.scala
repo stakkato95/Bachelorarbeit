@@ -5,9 +5,11 @@ import akka.actor.typed.{ActorRef, Behavior}
 import com.stakkato95.raft.behavior.Leader.Command
 import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse, ClientStart, ClientStop}
 import com.stakkato95.raft.behavior.base.{BaseCommand, NodesDiscovered}
+import com.stakkato95.raft.concurrent.ReentrantPromise
 
 object RaftClient {
-  def apply(resultCallback: String => Unit): Behavior[BaseCommand] = Behaviors.setup(new RaftClient(_, resultCallback))
+  def apply(reentrantPromise: ReentrantPromise[String]): Behavior[BaseCommand] =
+    Behaviors.setup(new RaftClient(_, reentrantPromise))
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -20,7 +22,7 @@ object RaftClient {
 }
 
 class RaftClient(context: ActorContext[BaseCommand],
-                 resultCallback: String => Unit) extends AbstractBehavior[BaseCommand](context) {
+                 reentrantPromise: ReentrantPromise[String]) extends AbstractBehavior[BaseCommand](context) {
 
   private var order = 0
 
@@ -57,6 +59,6 @@ class RaftClient(context: ActorContext[BaseCommand],
   }
 
   private def onClientResponse(currentState: String): Unit = {
-    resultCallback(currentState)
+    reentrantPromise.success(currentState)
   }
 }
