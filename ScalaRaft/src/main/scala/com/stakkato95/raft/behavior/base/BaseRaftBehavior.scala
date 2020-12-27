@@ -21,6 +21,7 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
         cluster ++= nodes
         this
       case _ =>
+        context.log.info("{} received {}", nodeId, msg)
         //TODO dangerous!!! all non-matched messages are skipped
         this
     }

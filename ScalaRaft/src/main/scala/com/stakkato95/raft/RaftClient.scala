@@ -2,7 +2,7 @@ package com.stakkato95.raft
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.RaftClient.{ClientRequest, ClientStart, ClientStop}
+import com.stakkato95.raft.RaftClient.{ClientRequest, ClientResponse, ClientStart, ClientStop}
 import com.stakkato95.raft.behavior.Follower
 import com.stakkato95.raft.behavior.Leader.Command
 import com.stakkato95.raft.behavior.base.{BaseCommand, NodesDiscovered}
@@ -23,9 +23,13 @@ object RaftClient {
 class RaftClient(context: ActorContext[BaseCommand],
                  resultCallback: String => Unit) extends AbstractBehavior[BaseCommand](context) {
 
-  private val node1 = context.spawnAnonymous(Follower("node-1"))
-  private val node2 = context.spawnAnonymous(Follower("node-2"))
-  private val node3 = context.spawnAnonymous(Follower("node-3"))
+  private var order = 0
+
+  private val cluster = List(
+    context.spawnAnonymous(Follower("node-1")),
+    context.spawnAnonymous(Follower("node-2")),
+    context.spawnAnonymous(Follower("node-3"))
+  )
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
@@ -33,7 +37,10 @@ class RaftClient(context: ActorContext[BaseCommand],
         onClientStart()
         this
       case request@ClientRequest(_, _) =>
-        //TODO round robin
+        onClientRequest(request)
+        this
+      case ClientResponse(currentState) =>
+        onClientResponse(currentState)
         this
       case ClientStop =>
         Behaviors.stopped
@@ -41,9 +48,15 @@ class RaftClient(context: ActorContext[BaseCommand],
   }
 
   private def onClientStart(): Unit = {
-    val cluster = List(node1.ref, node2.ref, node3.ref)
-    node1 ! NodesDiscovered(cluster)
-    node2 ! NodesDiscovered(cluster)
-    node3 ! NodesDiscovered(cluster)
+    cluster.foreach(_ ! NodesDiscovered(cluster))
+  }
+
+  private def onClientRequest(request: ClientRequest): Unit = {
+    cluster(order % cluster.size) ! request
+    order += 1
+  }
+
+  private def onClientResponse(currentState: String): Unit = {
+    resultCallback(currentState)
   }
 }

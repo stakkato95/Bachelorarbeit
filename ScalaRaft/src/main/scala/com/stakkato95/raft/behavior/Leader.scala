@@ -50,7 +50,7 @@ object Leader {
   val INITIAL_TERM = 0
 
   val MIN_ELECTION_TIMEOUT = 1
-  val MAX_ELECTION_TIMEOUT = 3
+  val MAX_ELECTION_TIMEOUT = 2
 
   def LEADER_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT)
 }

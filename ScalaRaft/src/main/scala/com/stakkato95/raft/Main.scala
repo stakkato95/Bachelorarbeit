@@ -13,14 +13,26 @@ object Main {
   def main(args: Array[String]): Unit = {
     val actorSystem = ActorSystem(RaftClient(clientCallback), "client")
     actorSystem ! ClientStart
-    Thread.sleep(10000)
+    Thread.sleep(15000)
 
+    val timer = 5000
     actorSystem ! ClientRequest("a", actorSystem.ref)
-    Thread.sleep(10000)
+    Thread.sleep(timer)
+    actorSystem ! ClientRequest("b", actorSystem.ref)
+    Thread.sleep(timer)
+    actorSystem ! ClientRequest("c", actorSystem.ref)
+    Thread.sleep(timer)
+    actorSystem ! ClientRequest("d", actorSystem.ref)
+    Thread.sleep(timer)
+    actorSystem ! ClientRequest("e", actorSystem.ref)
+    Thread.sleep(timer)
+    actorSystem ! ClientRequest("f", actorSystem.ref)
+    Thread.sleep(timer)
 
 
-    //TODO rename ActorSystemGuardian to RaftClient
-    //TODO pass client request to RaftClient
+//    Thread.sleep(10000)
+
+
     //TODO route from leader to follower
     //TODO send msg to system guardian an then to ONE OF NODES => Round Robin
 
@@ -29,6 +41,6 @@ object Main {
   }
 
   def clientCallback(value: String): Unit = {
-    println(value)
+    println("===" + value)
   }
 }

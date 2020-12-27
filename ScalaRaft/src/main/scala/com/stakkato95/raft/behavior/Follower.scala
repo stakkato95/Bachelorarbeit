@@ -3,6 +3,7 @@ package com.stakkato95.raft.behavior
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.RaftClient.ClientRequest
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
@@ -86,6 +87,9 @@ class Follower(context: ActorContext[BaseCommand],
         this
       case HeartbeatTimerElapsed =>
         onHeartbeatTimerElapsed()
+      case request@ClientRequest(_, _) =>
+        onClientRequest(request)
+        this
       case _ =>
         super.onMessage(msg)
     }
@@ -175,6 +179,15 @@ class Follower(context: ActorContext[BaseCommand],
 
   private def onHeartbeatTimerElapsed(): Behavior[BaseCommand] = {
     Candidate(followerNodeId, log, followerCluster, currentStateMachineValue)
+  }
+
+  private def onClientRequest(request: ClientRequest): Unit = {
+    lastLeader match {
+      case Some(LeaderInfo(_, leader)) =>
+        leader ! request
+      case None =>
+        context.log.info("{}: no leader for passing ClientRequest", nodeId)
+    }
   }
 
   private def restartHeartbeatTimer() = {
