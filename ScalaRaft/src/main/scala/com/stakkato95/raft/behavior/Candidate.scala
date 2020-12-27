@@ -1,19 +1,15 @@
 package com.stakkato95.raft.behavior
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.{LeaderInfo, Util}
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
+import com.stakkato95.raft.{LeaderInfo, Util}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
-import scala.util
-import scala.util.Random
 
 object Candidate {
 
@@ -46,7 +42,7 @@ object Candidate {
 
   final object VoteGranted extends Command
 
-//  private val rnd = new Random()
+  //  private val rnd = new Random()
 
   private val MAX_ELECTION_TIMEOUT = 6
   private val MIN_ELECTION_TIMEOUT = 3
