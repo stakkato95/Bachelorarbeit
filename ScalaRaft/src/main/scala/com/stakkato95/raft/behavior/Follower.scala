@@ -27,12 +27,14 @@ object Follower {
     }
   }
 
-  def apply(nodeId: String,
-            log: ArrayBuffer[LogItem],
-            cluster: ArrayBuffer[ActorRef[BaseCommand]],
-            stateMachineValue: String): Behavior[BaseCommand] = {
-    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster, stateMachineValue, None)
-  }
+  def apply(nodeId: String): Behavior[BaseCommand] = apply(
+    nodeId,
+    Candidate.ELECTION_TIMEOUT,
+    ArrayBuffer[LogItem](),
+    ArrayBuffer[ActorRef[BaseCommand]](),
+    "",
+    None
+  )
 
   trait Command extends BaseCommand
 
@@ -64,7 +66,7 @@ class Follower(context: ActorContext[BaseCommand],
     followerCluster,
     stateMachineValue) {
 
-  context.log.info("{} is follower", followerNodeId)
+  context.log.info("{} is follower, timeout = {}", followerNodeId, heartBeatTimeout)
   restartHeartbeatTimer()
 
   //TODO reset to "None" when new leader established with AppendEntriesHeartbeat
@@ -74,6 +76,7 @@ class Follower(context: ActorContext[BaseCommand],
     msg match {
       case AppendEntriesHeartbeat(leaderInfo, leaderCommit) =>
         onHeartbeat(leaderInfo, leaderCommit)
+        context.log.info("{} follower receives heartbeat", followerNodeId)
         this
       case AppendEntriesNewLog(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid) =>
         onAppendNewLogItem(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid)
@@ -212,7 +215,7 @@ class Follower(context: ActorContext[BaseCommand],
         // assume follower's log can lay only 1 item behind leaders log
         applyToSimpleStateMachine(log.last)
       case None | _ =>
-        // nothing to commit yet. Most probably the very first item received to log
+      // nothing to commit yet. Most probably the very first item received to log
     }
   }
 }

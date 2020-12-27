@@ -20,6 +20,9 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
       case NodesDiscovered(nodes) =>
         cluster ++= nodes
         this
+      case _ =>
+        //TODO dangerous!!! all non-matched messages are skipped
+        this
     }
   }
 

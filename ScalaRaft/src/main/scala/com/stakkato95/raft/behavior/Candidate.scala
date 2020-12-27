@@ -7,11 +7,12 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.{LeaderInfo, Util}
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
+import scala.util
 import scala.util.Random
 
 object Candidate {
@@ -45,15 +46,12 @@ object Candidate {
 
   final object VoteGranted extends Command
 
-  private val rnd = new Random()
+//  private val rnd = new Random()
 
-  private val MAX_ELECTION_TIMEOUT = 3
-  private val MIN_ELECTION_TIMEOUT = 1
+  private val MAX_ELECTION_TIMEOUT = 6
+  private val MIN_ELECTION_TIMEOUT = 3
 
-  def ELECTION_TIMEOUT: FiniteDuration = {
-    val length = MIN_ELECTION_TIMEOUT + (rnd.nextFloat() * (MAX_ELECTION_TIMEOUT - MIN_ELECTION_TIMEOUT)).toLong
-    FiniteDuration(length, TimeUnit.SECONDS)
-  }
+  def ELECTION_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT)
 }
 
 class Candidate(context: ActorContext[BaseCommand],
@@ -140,7 +138,7 @@ class Candidate(context: ActorContext[BaseCommand],
     }
 
     if (leaderInfo.term >= t) {
-      Follower(candidateNodeId, log, cluster, currentStateMachineValue)
+      Follower(candidateNodeId, Candidate.ELECTION_TIMEOUT, log, cluster, currentStateMachineValue, Some(log.size - 1))
     } else {
       this
     }

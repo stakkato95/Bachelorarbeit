@@ -1,16 +1,14 @@
 package com.stakkato95.raft.behavior
 
-import java.util.concurrent.TimeUnit
-
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
-import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
+import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse, LeaderTimerElapsed}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
-import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
+import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
+import com.stakkato95.raft.{LeaderInfo, Util}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -36,7 +34,7 @@ object Leader {
             cluster: ArrayBuffer[ActorRef[BaseCommand]],
             leaderTerm: Int,
             stateMachineValue: String): Behavior[BaseCommand] = {
-    apply(nodeId, RESEND_LOG_TIMEOUT, log, cluster, leaderTerm, new DefaultUuid, stateMachineValue)
+    apply(nodeId, LEADER_TIMEOUT, log, cluster, leaderTerm, new DefaultUuid, stateMachineValue)
   }
 
   trait Command extends BaseCommand
@@ -50,15 +48,20 @@ object Leader {
 
   final case class ClientResponse(currentState: String)
 
+  private final object LeaderTimerElapsed extends Command
+
   val INITIAL_TERM = 0
 
-  private val RESEND_LOG_TIMEOUT = FiniteDuration(1, TimeUnit.SECONDS)
+  val MIN_ELECTION_TIMEOUT = 1
+  val MAX_ELECTION_TIMEOUT = 3
+
+  def LEADER_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT)
 }
 
 
 class Leader(context: ActorContext[BaseCommand],
              leaderNodeId: String,
-             timers: TimerScheduler[BaseCommand],
+             timer: TimerScheduler[BaseCommand],
              timeout: FiniteDuration,
              leaderLog: ArrayBuffer[LogItem],
              leaderCluster: ArrayBuffer[ActorRef[BaseCommand]],
@@ -71,6 +74,8 @@ class Leader(context: ActorContext[BaseCommand],
     leaderLog,
     leaderCluster,
     stateMachineValue) {
+
+  //TODO logic how Leader can again become Follower
 
   //index of the next log entry the leader will send to that follower.
 
@@ -87,8 +92,8 @@ class Leader(context: ActorContext[BaseCommand],
   private var pendingItems = Map[String, PendingItem]()
   private var leaderCommit: Option[Int] = if (log.nonEmpty) Some(log.size - 1) else None
 
-  context.log.info("{} is follower", nodeId)
-  establishLeadership()
+  context.log.info("{} is leader", nodeId)
+  onLeadershipTimerElapsed()
 
   //TODO timers to repeat sending of log items, which have not been confirmed
 
@@ -100,6 +105,9 @@ class Leader(context: ActorContext[BaseCommand],
       case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo) =>
         onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo)
         this
+      case LeaderTimerElapsed =>
+        onLeadershipTimerElapsed()
+        this
       case _ =>
         super.onMessage(msg)
     }
@@ -109,6 +117,15 @@ class Leader(context: ActorContext[BaseCommand],
 
   private def establishLeadership() = {
     getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self), leaderCommit))
+  }
+
+  private def startLeadershipTimer(): Unit = {
+    timer.startSingleTimer(LeaderTimerElapsed, LeaderTimerElapsed, timeout)
+  }
+
+  private def onLeadershipTimerElapsed(): Unit = {
+    establishLeadership()
+    startLeadershipTimer()
   }
 
   private def onClientRequest(value: String, replyTo: ActorRef[ClientResponse]) = {
