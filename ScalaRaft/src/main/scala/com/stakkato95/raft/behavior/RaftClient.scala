@@ -1,10 +1,9 @@
-package com.stakkato95.raft
+package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.RaftClient.{ClientRequest, ClientResponse, ClientStart, ClientStop}
-import com.stakkato95.raft.behavior.Follower
 import com.stakkato95.raft.behavior.Leader.Command
+import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse, ClientStart, ClientStop}
 import com.stakkato95.raft.behavior.base.{BaseCommand, NodesDiscovered}
 
 object RaftClient {
@@ -52,6 +51,7 @@ class RaftClient(context: ActorContext[BaseCommand],
   }
 
   private def onClientRequest(request: ClientRequest): Unit = {
+    // round robin principle
     cluster(order % cluster.size) ! request
     order += 1
   }

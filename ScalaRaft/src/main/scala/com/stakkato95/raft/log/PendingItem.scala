@@ -1,7 +1,7 @@
 package com.stakkato95.raft.log
 
 import akka.actor.typed.ActorRef
-import com.stakkato95.raft.RaftClient.ClientResponse
+import com.stakkato95.raft.behavior.RaftClient.ClientResponse
 
 /**
  *

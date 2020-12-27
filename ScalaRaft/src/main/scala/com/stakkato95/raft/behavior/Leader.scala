@@ -3,9 +3,9 @@ package com.stakkato95.raft.behavior
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft
-import com.stakkato95.raft.RaftClient.{ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, LeaderTimerElapsed}
+import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
@@ -49,10 +49,10 @@ object Leader {
 
   val INITIAL_TERM = 0
 
-  val MIN_ELECTION_TIMEOUT = 1
-  val MAX_ELECTION_TIMEOUT = 2
+  val MIN_LEADER_TIMEOUT_MILLISEC = 1
+  val MAX_LEADER_TIMEOUT_MILLISEC = 2
 
-  def LEADER_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT)
+  def LEADER_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_LEADER_TIMEOUT_MILLISEC, MAX_LEADER_TIMEOUT_MILLISEC)
 }
 
 
@@ -100,6 +100,7 @@ class Leader(context: ActorContext[BaseCommand],
         onClientRequest(value, replyTo)
         this
       case AppendEntriesResponse(success, logItemUuid, nodeId, replyTo) =>
+        context.log.info("logItemUuid {}", logItemUuid)
         onAppendEntriesResponse(success, logItemUuid, nodeId, replyTo)
         this
       case LeaderTimerElapsed =>
@@ -164,15 +165,23 @@ class Leader(context: ActorContext[BaseCommand],
     val nextIndexForFollower = nextIndices(replyTo) + 1
     nextIndices += replyTo -> nextIndexForFollower
 
-    pendingItems(logItemUuid).votes += 1
+    // when an item is replicated to quorum, it will be deleted from pendingItems,
+    // so other nodes, which have successfully replicated this item don't need to
+    // report it in pendingItems(logItemUuid)
+    pendingItems.get(logItemUuid) match {
+      case Some(_) =>
+        pendingItems(logItemUuid).votes += 1
 
-    if (pendingItems(logItemUuid).votes >= quorumSize) {
-      val pendingItem = pendingItems(logItemUuid)
-      pendingItems -= logItemUuid
-      applyToSimpleStateMachine(pendingItem.logItem)
-      leaderCommit = leaderCommit.map(_ + 1)
+        if (pendingItems(logItemUuid).votes >= quorumSize) {
+          val pendingItem = pendingItems(logItemUuid)
+          pendingItems -= logItemUuid
+          applyToSimpleStateMachine(pendingItem.logItem)
+          leaderCommit = leaderCommit.map(_ + 1)
 
-      pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
+          pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
+        }
+      case None =>
+        context.log.info("{} was successfully replicated to quorum", logItemUuid)
     }
   }
 

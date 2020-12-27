@@ -44,10 +44,10 @@ object Candidate {
 
   //  private val rnd = new Random()
 
-  private val MAX_ELECTION_TIMEOUT = 6
-  private val MIN_ELECTION_TIMEOUT = 3
+  private val MAX_ELECTION_TIMEOUT_MILLISEC = 6000
+  private val MIN_ELECTION_TIMEOUT_MILLISEC = 3000
 
-  def ELECTION_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT, MAX_ELECTION_TIMEOUT)
+  def ELECTION_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT_MILLISEC, MAX_ELECTION_TIMEOUT_MILLISEC)
 }
 
 class Candidate(context: ActorContext[BaseCommand],

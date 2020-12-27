@@ -9,6 +9,6 @@ object Util {
 
   def getRandomTimeout(from: Int, to: Int): FiniteDuration = {
     val length = from + (new Random().nextFloat * (to - from)).toLong
-    FiniteDuration(length, TimeUnit.SECONDS)
+    FiniteDuration(length, TimeUnit.MILLISECONDS)
   }
 }
