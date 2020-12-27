@@ -124,7 +124,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
         newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue) ,
-        leaderCommit = 2,
+        leaderCommit = Some(2),
         logItemUuid = Some(LeaderSpec.UUID)
       )
       //leader sends AppendEntriesNewLog to all followers
@@ -170,7 +170,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
         newLogItem = log(log.size - 2),
-        leaderCommit = leaderCommitWhenRetrying,
+        leaderCommit = Some(leaderCommitWhenRetrying),
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
 
@@ -190,7 +190,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 0, leaderTerm = 1)),
         newLogItem = log(log.size - 3),
-        leaderCommit = leaderCommitWhenRetrying,
+        leaderCommit = Some(leaderCommitWhenRetrying),
         logItemUuid = None //uuid is not important, since success=false is received from one particular node
       )
       // follower2 should receive AppendEntriesNewLog to repair its LogItem at index 1 => LogItem(2, "h")
@@ -225,7 +225,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       // is equal to the penultimate item on Leader
       ///////////////////////////////////////////////////////////////////////////////////////////
       leader ! follower2success
-      follower2.expectMessage(appendAntriesMsg.copy(leaderCommit = 3, logItemUuid = None))
+      follower2.expectMessage(appendAntriesMsg.copy(leaderCommit = Some(3), logItemUuid = None))
       followerLog += log(log.size - 1) //append second item from Leader to the log of the follower
       log should ===(followerLog)
     }

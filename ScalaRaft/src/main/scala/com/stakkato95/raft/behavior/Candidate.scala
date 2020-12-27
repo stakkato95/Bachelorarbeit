@@ -79,10 +79,10 @@ class Candidate(context: ActorContext[BaseCommand],
     msg match {
       case VoteGranted =>
         onVoteGranted()
-      case AppendEntriesHeartbeat(leaderInfo) =>
-        onAppendEntries(leaderInfo)
-      case AppendEntriesNewLog(leaderInfo, _, _, _, _) =>
-        onAppendEntries(leaderInfo)
+      case AppendEntriesHeartbeat(leaderInfo, leaderCommit) =>
+        onAppendEntries(leaderInfo, leaderCommit)
+      case AppendEntriesNewLog(leaderInfo, _, _, leaderCommit, _) =>
+        onAppendEntries(leaderInfo, leaderCommit)
       case ElectionTimerElapsed =>
         restartElectionProcess()
         this
@@ -132,7 +132,7 @@ class Candidate(context: ActorContext[BaseCommand],
     }
   }
 
-  def onAppendEntries(leaderInfo: LeaderInfo): Behavior[BaseCommand] = {
+  def onAppendEntries(leaderInfo: LeaderInfo, leaderCommit: Option[Int]): Behavior[BaseCommand] = {
     val t = term match {
       case None => Leader.INITIAL_TERM
       case Some(value) => value

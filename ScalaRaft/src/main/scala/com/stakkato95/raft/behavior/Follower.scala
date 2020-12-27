@@ -17,10 +17,11 @@ object Follower {
             timeout: FiniteDuration,
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]],
-            stateMachineValue: String): Behavior[BaseCommand] = {
+            stateMachineValue: String,
+            lastApplied: Option[Int]): Behavior[BaseCommand] = {
     Behaviors.setup { context =>
       Behaviors.withTimers { timers =>
-        new Follower(context, nodeId, timers, timeout, log, cluster, stateMachineValue)
+        new Follower(context, nodeId, timers, timeout, log, cluster, stateMachineValue, lastApplied)
       }
     }
   }
@@ -29,22 +30,22 @@ object Follower {
             log: ArrayBuffer[LogItem],
             cluster: ArrayBuffer[ActorRef[BaseCommand]],
             stateMachineValue: String): Behavior[BaseCommand] = {
-    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster, stateMachineValue)
+    apply(nodeId, Candidate.ELECTION_TIMEOUT, log, cluster, stateMachineValue, None)
   }
 
   trait Command extends BaseCommand
 
-  //TODO heartbeat also includes "leaderCommit: Int" !!!
-  final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo) extends Command
+  final case class AppendEntriesHeartbeat(leaderInfo: LeaderInfo, leaderCommit: Option[Int]) extends Command
 
   final case class AppendEntriesNewLog(leaderInfo: LeaderInfo,
                                        previousLogItem: Option[PreviousLogItem],
                                        newLogItem: LogItem,
-                                       leaderCommit: Int,
+                                       leaderCommit: Option[Int],
                                        logItemUuid: Option[String]) extends Command
 
   private final object HeartbeatTimerElapsed extends Command
 
+  private val NO_LOG_ITEMS_APPLIED = -1
 }
 
 class Follower(context: ActorContext[BaseCommand],
@@ -53,7 +54,8 @@ class Follower(context: ActorContext[BaseCommand],
                heartBeatTimeout: FiniteDuration,
                followerLog: ArrayBuffer[LogItem],
                followerCluster: ArrayBuffer[ActorRef[BaseCommand]],
-               stateMachineValue: String)
+               stateMachineValue: String,
+               var lastApplied: Option[Int])
   extends BaseRaftBehavior[BaseCommand](
     context,
     followerNodeId,
@@ -69,8 +71,8 @@ class Follower(context: ActorContext[BaseCommand],
 
   override def onMessage(msg: BaseCommand): Behavior[BaseCommand] = {
     msg match {
-      case AppendEntriesHeartbeat(leaderInfo) =>
-        onHeartbeat(leaderInfo)
+      case AppendEntriesHeartbeat(leaderInfo, leaderCommit) =>
+        onHeartbeat(leaderInfo, leaderCommit)
         this
       case AppendEntriesNewLog(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid) =>
         onAppendNewLogItem(leaderInfo, previousLogItem, newLogItem, leaderCommit, logItemUuid)
@@ -91,15 +93,19 @@ class Follower(context: ActorContext[BaseCommand],
       this
   }
 
-  private def onHeartbeat(leaderInfo: LeaderInfo) = {
-    updateLastLeader(leaderInfo)
+  private def onHeartbeat(leaderInfo: LeaderInfo, leaderCommit: Option[Int]) = {
+    if (leaderInfo.term >= getLastSeenTerm()) {
+      updateLastLeader(leaderInfo)
+      commitLog(leaderCommit)
+    }
+
     restartHeartbeatTimer()
   }
 
   private def onAppendNewLogItem(leaderInfo: LeaderInfo,
                                  previousLogItem: Option[PreviousLogItem],
                                  newLogItem: LogItem,
-                                 leaderCommit: Int,
+                                 leaderCommit: Option[Int],
                                  logItemUuid: Option[String]): Unit = {
     //TODO Page 11
     //TODO To prevent this problem, servers disregard RequestVote RPCs when they believe a current leader exists.
@@ -110,6 +116,7 @@ class Follower(context: ActorContext[BaseCommand],
 
     updateLastLeader(leaderInfo)
 
+
     if (log.isEmpty) {
       previousLogItem match {
         case None =>
@@ -118,16 +125,25 @@ class Follower(context: ActorContext[BaseCommand],
         case _ =>
           //reach the very beginning of the log at Leader and force it to resend log starting from the first item
           leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
+
+          //last item can not be applied, since it is still invalid / inconsistent with Leader's log
+          return
       }
     } else {
       if (previousItemFromLeaderLogEqualsLastLogItem(previousLogItem)) {
         applyLogItem(leaderInfo, newLogItem, logItemUuid)
       } else {
+        lastApplied = lastApplied.map(_ - 1)
         log.remove(log.size - 1)
         unapplyFromSimpleStateMachine()
         leaderInfo.leader ! AppendEntriesResponse(success = false, logItemUuid, nodeId, context.self)
+
+        //last item can not be applied, since it is still invalid / inconsistent with Leader's log
+        return
       }
     }
+
+    commitLog(leaderCommit)
   }
 
   private def onRequestVote(candidateTerm: Int, candidate: ActorRef[Command], lastLogItem: Option[PreviousLogItem]) = {
@@ -181,7 +197,21 @@ class Follower(context: ActorContext[BaseCommand],
                            newLogItem: LogItem,
                            logItemUuid: Option[String]): Unit = {
     log += newLogItem
-    applyToSimpleStateMachine(log.last)
     leaderInfo.leader ! AppendEntriesResponse(success = true, logItemUuid, nodeId, context.self)
+  }
+
+  private def commitLog(leaderCommit: Option[Int]): Unit = {
+    val followerCommit = lastApplied match {
+      case Some(commit) => commit
+      case None => Follower.NO_LOG_ITEMS_APPLIED
+    }
+
+    leaderCommit match {
+      case Some(commit) if commit > followerCommit && log.nonEmpty =>
+        // assume follower's log can lay only 1 item behind leaders log
+        applyToSimpleStateMachine(log.last)
+      case None | _ =>
+        // nothing to commit yet. Most probably the very first item received to log
+    }
   }
 }

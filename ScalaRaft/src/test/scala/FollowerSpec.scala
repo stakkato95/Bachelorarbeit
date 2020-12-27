@@ -26,7 +26,8 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = ArrayBuffer(),
         cluster = ArrayBuffer(node1.ref, node2.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
       val msg = RequestVote(
@@ -62,14 +63,15 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(leader.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
         previousLogItem = Some(previousLogItem),
         newLogItem = LogItem(leaderTerm = leaderTerm, value = "new"),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = Some(logItemUuid)
       )
 
@@ -103,14 +105,15 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(leader.ref),
-        stateMachineValue = "abc"
+        stateMachineValue = "abc",
+        lastApplied = Some(2)
       ))
 
       follower ! AppendEntriesNewLog(
         leaderInfo = LeaderInfo(leaderTerm, leader.ref),
         previousLogItem = Some(previousLogItem),
         newLogItem = LogItem(leaderTerm = leaderTerm, value = "new"),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = Some(logItemUuid)
       )
 
@@ -144,13 +147,17 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(currentLeader.ref, candidate.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
-      follower ! AppendEntriesHeartbeat(LeaderInfo(
-        term = leaderTerm,
-        leader = currentLeader.ref
-      ))
+      follower ! AppendEntriesHeartbeat(
+        leaderInfo = LeaderInfo(
+          term = leaderTerm,
+          leader = currentLeader.ref
+        ),
+        leaderCommit = None
+      )
 
       follower ! RequestVote(
         candidateTerm = oldLeaderTerm,
@@ -179,13 +186,17 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(currentLeader.ref, candidate.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
-      follower ! AppendEntriesHeartbeat(LeaderInfo(
-        term = leaderTerm,
-        leader = currentLeader.ref
-      ))
+      follower ! AppendEntriesHeartbeat(
+        leaderInfo = LeaderInfo(
+          term = leaderTerm,
+          leader = currentLeader.ref
+        ),
+        leaderCommit = None
+      )
 
       follower ! RequestVote(
         candidateTerm = candidateTerm,
@@ -214,13 +225,17 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(currentLeader.ref, candidate1.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
-      follower ! AppendEntriesHeartbeat(LeaderInfo(
-        term = leaderTerm,
-        leader = currentLeader.ref
-      ))
+      follower ! AppendEntriesHeartbeat(
+        leaderInfo = LeaderInfo(
+          term = leaderTerm,
+          leader = currentLeader.ref
+        ),
+        leaderCommit = None
+      )
 
       follower ! RequestVote(
         candidateTerm = candidateTerm,
@@ -249,13 +264,17 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FollowerSpec.TIMEOUT,
         log = followerInitialLog,
         cluster = ArrayBuffer(currentLeader.ref, candidate1.ref, candidate2.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
-      follower ! AppendEntriesHeartbeat(LeaderInfo(
-        term = leaderTerm,
-        leader = currentLeader.ref
-      ))
+      follower ! AppendEntriesHeartbeat(
+        leaderInfo = LeaderInfo(
+          term = leaderTerm,
+          leader = currentLeader.ref
+        ),
+        leaderCommit = None
+      )
 
       follower ! RequestVote(
         candidateTerm = candidateTerm,
@@ -294,11 +313,13 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FiniteDuration(60, TimeUnit.SECONDS),
         log = log,
         cluster = ArrayBuffer(leader.ref, follower2.ref),
-        stateMachineValue = "ahi"
+        stateMachineValue = "ahi",
+        lastApplied = Some(2)
       ))
 
       //establish leadership
-      follower ! AppendEntriesHeartbeat(leaderInfo)
+      var leaderCommit = 2
+      follower ! AppendEntriesHeartbeat(leaderInfo = leaderInfo, leaderCommit = Some(leaderCommit))
 
       // Client sends request to Leader with new item "d"
       val newValue = "d"
@@ -308,12 +329,11 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Leader start to replicate. It should save new item to its own log, replicate it to follower2 and follower
       ////////////////////////////////////////////////////////////
-      var leaderCommit = 2
       val appendNewItem = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
         newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! appendNewItem
@@ -329,7 +349,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = FollowerSpec.NODE_ID,
         replyTo = follower.ref
       )
-      leader.expectMessage(followerUnsuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerUnsuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(1, "h")))
 
 
@@ -338,7 +358,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
         newLogItem = LogItem(3, "c"),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! retry1
@@ -347,7 +367,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerUnsuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerUnsuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a")))
 
 
@@ -356,7 +376,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 0, leaderTerm = 1)),
         newLogItem = LogItem(2, "b"),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! retry2
@@ -371,7 +391,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = FollowerSpec.NODE_ID,
         replyTo = follower.ref
       )
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b")))
 
 
@@ -382,7 +402,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should send AppendEntriesResponse(success = false) and append LogItem(3, "c") to its log
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b"), LogItem(3, "c")))
 
 
@@ -393,8 +413,10 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower log should be consistent
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(leaderLog)
+
+      //TODO check that "currentStateMachineValue" inside Follower is correct
     }
 
     "be brought by Leader into consistent state if Follower's log is empty" in {
@@ -415,11 +437,13 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         timeout = FiniteDuration(60, TimeUnit.SECONDS),
         log = log,
         cluster = ArrayBuffer(leader.ref, follower2.ref),
-        stateMachineValue = ""
+        stateMachineValue = "",
+        lastApplied = None
       ))
 
       //establish leadership
-      follower ! AppendEntriesHeartbeat(leaderInfo)
+      var leaderCommit = 2
+      follower ! AppendEntriesHeartbeat(leaderInfo = leaderInfo, leaderCommit = Some(2))
 
       // Client sends request to Leader with new item "d"
       val newValue = "d"
@@ -429,12 +453,12 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Leader start to replicate. It should save new item to its own log, replicate it to follower2 and follower
       ////////////////////////////////////////////////////////////
-      var leaderCommit = 2
+
       val appendNewItem = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
         newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! appendNewItem
@@ -450,7 +474,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = FollowerSpec.NODE_ID,
         replyTo = follower.ref
       )
-      leader.expectMessage(followerUnsuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerUnsuccessful)
       log.size should ===(0)
 
 
@@ -459,7 +483,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 1, leaderTerm = 2)),
         newLogItem = LogItem(3, "c"),
-        leaderCommit = leaderCommit,
+        leaderCommit = Some(leaderCommit),
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! retry1
@@ -468,7 +492,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerUnsuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerUnsuccessful)
       log.size should ===(0)
 
 
@@ -483,7 +507,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should remove last item from log and send AppendEntriesResponse(success = false)
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerUnsuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerUnsuccessful)
       log.size should ===(0)
 
 
@@ -500,7 +524,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         nodeId = FollowerSpec.NODE_ID,
         replyTo = follower.ref
       )
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a")))
 
 
@@ -511,7 +535,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should send AppendEntriesResponse(success = true) and append LogItem(2, "b") to its log
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b")))
 
 
@@ -522,7 +546,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       ////////////////////////////////////////////////////////////
       // Follower should send AppendEntriesResponse(success = true) and append LogItem(3, "c") to its log
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(ArrayBuffer(LogItem(1, "a"), LogItem(2, "b"), LogItem(3, "c")))
 
 
@@ -534,8 +558,10 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       // Follower should send AppendEntriesResponse(success = true) and append LogItem(4, "d") to its log
       // Follower log should be consistent
       ////////////////////////////////////////////////////////////
-      leader.expectMessage(followerSuccessful)
+      leader.expectMessage(FollowerSpec.EXPECT_MSG_TIMEOUT, followerSuccessful)
       log should ===(leaderLog)
+
+      //TODO check that "currentStateMachineValue" inside Follower is correct
     }
   }
 }
@@ -545,4 +571,7 @@ object FollowerSpec {
   private val NODE_ID = "node-1"
 
   private val TIMEOUT = FiniteDuration(2, TimeUnit.SECONDS)
+
+  // for test purposes
+  private val EXPECT_MSG_TIMEOUT = FiniteDuration(60, TimeUnit.SECONDS)
 }

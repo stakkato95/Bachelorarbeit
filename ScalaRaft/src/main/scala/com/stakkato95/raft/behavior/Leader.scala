@@ -83,7 +83,7 @@ class Leader(context: ActorContext[BaseCommand],
   // and it will remain that way for the rest of the term.
   private var nextIndices: Map[ActorRef[BaseCommand], Int] = cluster.map((_, log.size)).toMap
   private var pendingItems = Map[String, PendingItem]()
-  private var leaderCommit = log.size - 1
+  private var leaderCommit: Option[Int] = if (log.nonEmpty) Some(log.size - 1) else None
 
   context.log.info("{} is follower", nodeId)
   establishLeadership()
@@ -106,7 +106,7 @@ class Leader(context: ActorContext[BaseCommand],
   override def onSignal: PartialFunction[Signal, Behavior[BaseCommand]] = super.onSignal
 
   private def establishLeadership() = {
-    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self)))
+    getRestOfCluster().foreach(_ ! AppendEntriesHeartbeat(LeaderInfo(leaderTerm, context.self), leaderCommit))
   }
 
   private def onClientRequest(value: String, replyTo: ActorRef[ClientResponse]) = {
@@ -154,7 +154,7 @@ class Leader(context: ActorContext[BaseCommand],
       val pendingItem = pendingItems(logItemUuid)
       pendingItems -= logItemUuid
       applyToSimpleStateMachine(pendingItem.logItem)
-      leaderCommit += 1
+      leaderCommit = leaderCommit.map(_ + 1)
 
       pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
     }

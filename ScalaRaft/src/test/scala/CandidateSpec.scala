@@ -38,10 +38,13 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       candidate ! VoteGranted
       candidate ! VoteGranted
 
-      val msg = AppendEntriesHeartbeat(LeaderInfo(
-        term = 1,
-        leader = candidate.ref
-      ))
+      val msg = AppendEntriesHeartbeat(
+        leaderInfo = LeaderInfo(
+          term = 1,
+          leader = candidate.ref
+        ),
+        leaderCommit = None
+      )
       follower1.expectMessage(msg)
       follower2.expectMessage(msg)
     }
