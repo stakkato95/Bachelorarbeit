@@ -1,18 +1,17 @@
-import java.util.concurrent.TimeUnit
-
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Candidate.{RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.BaseCommand
-import com.stakkato95.raft.uuid.Uuid
-import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
+import com.stakkato95.raft.uuid.Uuid
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
@@ -311,7 +310,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       )
       val follower = spawn(Follower(
         nodeId = FollowerSpec.NODE_ID,
-        timeout = FiniteDuration(60, TimeUnit.SECONDS),
+        timeout = 60 seconds,
         log = log,
         cluster = ArrayBuffer(leader.ref, follower2.ref),
         stateMachineValue = "ahi",
@@ -435,7 +434,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val log = ArrayBuffer[LogItem]()
       val follower = spawn(Follower(
         nodeId = FollowerSpec.NODE_ID,
-        timeout = FiniteDuration(60, TimeUnit.SECONDS),
+        timeout = 60 seconds,
         log = log,
         cluster = ArrayBuffer(leader.ref, follower2.ref),
         stateMachineValue = "",
@@ -571,8 +570,8 @@ object FollowerSpec {
 
   private val NODE_ID = "node-1"
 
-  private val TIMEOUT = FiniteDuration(2, TimeUnit.SECONDS)
+  private val TIMEOUT = 2 seconds
 
   // for test purposes
-  private val EXPECT_MSG_TIMEOUT = FiniteDuration(60, TimeUnit.SECONDS)
+  private val EXPECT_MSG_TIMEOUT = 60 seconds
 }

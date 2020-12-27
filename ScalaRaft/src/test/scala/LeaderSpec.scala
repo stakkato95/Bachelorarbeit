@@ -1,5 +1,3 @@
-import java.util.concurrent.TimeUnit
-
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
@@ -12,7 +10,8 @@ import com.stakkato95.raft.uuid.UuidProvider
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
@@ -34,7 +33,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val leaderTerm = 4
       val leader = spawn(Leader(
         nodeId = "leader",
-        timeout = FiniteDuration(4, TimeUnit.SECONDS),
+        timeout = 4 seconds,
         log = log,
         cluster = ArrayBuffer(follower1.ref, follower2.ref, follower3.ref, follower4.ref),
         leaderTerm = leaderTerm,
@@ -66,7 +65,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val leaderTerm = 4
       val leader = spawn(Leader(
         nodeId = "leader",
-        timeout = FiniteDuration(4, TimeUnit.SECONDS),
+        timeout = 4 seconds,
         log = log,
         cluster = ArrayBuffer(follower1.ref, follower2.ref, follower3.ref, follower4.ref),
         leaderTerm = leaderTerm,
@@ -103,7 +102,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val stateMachineValue = "abc"
       val leader = spawn(Leader(
         nodeId = "leader",
-        timeout = FiniteDuration(4, TimeUnit.SECONDS),
+        timeout = 4 seconds,
         log = log,
         cluster = ArrayBuffer(follower1.ref, follower2.ref),
         leaderTerm = leaderTerm,
@@ -125,7 +124,7 @@ class LeaderSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val appendAntriesMsg = AppendEntriesNewLog(
         leaderInfo = leaderInfo,
         previousLogItem = Some(PreviousLogItem(index = 2, leaderTerm = 3)),
-        newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue) ,
+        newLogItem = LogItem(leaderTerm = leaderTerm, value = newValue),
         leaderCommit = Some(2),
         logItemUuid = Some(LeaderSpec.UUID)
       )

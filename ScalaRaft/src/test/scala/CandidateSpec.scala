@@ -1,5 +1,3 @@
-import java.util.concurrent.TimeUnit
-
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Candidate
@@ -9,7 +7,8 @@ import com.stakkato95.raft.behavior.base.BaseCommand
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
@@ -21,7 +20,7 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       val candidate = spawn(Candidate(
         nodeId = "node-1",
-        timeout = FiniteDuration(4, TimeUnit.SECONDS),
+        timeout = 4 seconds,
         log = ArrayBuffer(),
         cluster = ArrayBuffer(follower1.ref, follower2.ref),
         stateMachineValue = ""
@@ -57,7 +56,7 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       val candidate = spawn(Candidate(
         nodeId = "node-1",
-        timeout = FiniteDuration(4, TimeUnit.SECONDS),
+        timeout = 4 seconds,
         log = ArrayBuffer(),
         cluster = ArrayBuffer(follower1.ref, follower2.ref, follower3.ref, follower4.ref),
         stateMachineValue = ""
@@ -85,10 +84,10 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       val follower1 = createTestProbe[BaseCommand]()
 
       val timeoutTime = 2
-      val followerTimeout = FiniteDuration(timeoutTime + 1, TimeUnit.SECONDS)
+      val followerTimeout = (timeoutTime + 1) seconds
       val candidate = spawn(Candidate(
         nodeId = "node-1",
-        timeout = FiniteDuration(timeoutTime, TimeUnit.SECONDS),
+        timeout = timeoutTime seconds,
         log = ArrayBuffer(),
         cluster = ArrayBuffer(follower1.ref),
         stateMachineValue = ""
@@ -127,5 +126,5 @@ class CandidateSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 }
 
 object CandidateSpec {
-  private val EXPECT_MESSAGE_TIMEOUT = FiniteDuration(2, TimeUnit.SECONDS)
+  private val EXPECT_MESSAGE_TIMEOUT = 2 seconds
 }
