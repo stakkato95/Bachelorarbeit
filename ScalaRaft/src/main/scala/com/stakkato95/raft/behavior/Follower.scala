@@ -6,7 +6,8 @@ import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration

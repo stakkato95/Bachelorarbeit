@@ -1,11 +1,12 @@
 import java.util.concurrent.TimeUnit
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.BaseCommand
+import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.UuidProvider
 import org.scalatest.wordspec.AnyWordSpecLike
 

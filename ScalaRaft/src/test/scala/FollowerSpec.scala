@@ -7,7 +7,8 @@ import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntr
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.BaseCommand
 import com.stakkato95.raft.uuid.Uuid
-import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 import org.scalatest.wordspec.AnyWordSpecLike
 
 import scala.collection.mutable.ArrayBuffer

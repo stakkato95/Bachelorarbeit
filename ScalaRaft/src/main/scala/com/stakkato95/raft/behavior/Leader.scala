@@ -4,11 +4,13 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
+import com.stakkato95.raft
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.uuid.UuidProvider
-import com.stakkato95.raft.{DefaultUuid, PreviousLogItem, LeaderInfo, LogItem, PendingItem}
+import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -112,7 +114,7 @@ class Leader(context: ActorContext[BaseCommand],
   private def onClientRequest(value: String, replyTo: ActorRef[ClientResponse]) = {
     val uuid = uuidProvider.get
     val logItem = LogItem(leaderTerm, value)
-    pendingItems += uuid -> PendingItem(logItem, 1, replyTo)
+    pendingItems += uuid -> raft.log.PendingItem(logItem, 1, replyTo)
 
     val msg = AppendEntriesNewLog(
       leaderInfo = LeaderInfo(leaderTerm, context.self),

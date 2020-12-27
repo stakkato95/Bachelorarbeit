@@ -2,7 +2,8 @@ package com.stakkato95.raft.behavior.base
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.{PreviousLogItem, LeaderInfo, LogItem}
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 
 import scala.collection.mutable.ArrayBuffer
 
