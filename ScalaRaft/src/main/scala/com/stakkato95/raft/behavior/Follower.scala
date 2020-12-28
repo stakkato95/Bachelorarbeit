@@ -244,8 +244,9 @@ class Follower(context: ActorContext[BaseCommand],
     leaderCommit match {
       case Some(commit) if commit > followerCommit && log.nonEmpty =>
         // assume follower's log can lay only 1 item behind leaders log
-        lastApplied = Some(commit)
-        applyToSimpleStateMachine(log(commit))
+        val newLastApplied = followerCommit + 1
+        lastApplied = Some(newLastApplied)
+        applyToSimpleStateMachine(log(newLastApplied))
       case None | _ =>
       // nothing to commit yet. Most probably the very first item received to log
     }

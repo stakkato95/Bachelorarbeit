@@ -462,6 +462,7 @@ class FollowerSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         logItemUuid = None //for test purposes uuid is irrelevant
       )
       follower ! appendNewItem
+
       leaderCommit = 3
 
 
