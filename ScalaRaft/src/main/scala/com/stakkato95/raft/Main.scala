@@ -5,6 +5,7 @@ import com.stakkato95.raft.behavior.{Client, Follower, Leader}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.concurrent.ReentrantPromise
+import com.stakkato95.raft.debug.{FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -31,33 +32,33 @@ object Main {
 
     Thread.sleep(3000)
 
-    actorSystem ! Debug.NodeInfoRequest("node-1", actorSystem.ref)
-    val info1 = future.get[NodeInfo]()
+    actorSystem ! Debug.InfoRequest("node-1", actorSystem.ref)
+    val info1 = future.get[NodeDebugInfo]()
     println(">>>" + info1)
 
-    actorSystem ! Debug.NodeInfoRequest("node-2", actorSystem.ref)
-    val info2 = future.get[NodeInfo]()
+    actorSystem ! Debug.InfoRequest("node-2", actorSystem.ref)
+    val info2 = future.get[NodeDebugInfo]()
     println(">>>" + info2)
 
-    actorSystem ! Debug.NodeInfoRequest("node-3", actorSystem.ref)
-    val info3 = future.get[NodeInfo]()
+    actorSystem ! Debug.InfoRequest("node-3", actorSystem.ref)
+    val info3 = future.get[NodeDebugInfo]()
     println(">>>" + info3)
 
 
-    actorSystem ! Leader.Debug.LeaderInfoRequest(actorSystem.ref)
+    actorSystem ! Leader.Debug.InfoRequest(actorSystem.ref)
     val leaderInfo = future.get[LeaderDebugInfo]()
     println(">>>" + leaderInfo)
 
     actorSystem ! Follower.Debug.InfoRequest("node-1", actorSystem.ref)
-    val followerInfo1 = future.getWithTimeout[FollowerInfo](1000)
+    val followerInfo1 = future.getWithTimeout[FollowerDebugInfo](1000)
     println(">>>" + followerInfo1)
 
     actorSystem ! Follower.Debug.InfoRequest("node-2", actorSystem.ref)
-    val followerInfo2 = future.getWithTimeout[FollowerInfo](1000)
+    val followerInfo2 = future.getWithTimeout[FollowerDebugInfo](1000)
     println(">>>" + followerInfo2)
 
     actorSystem ! Follower.Debug.InfoRequest("node-3", actorSystem.ref)
-    val followerInfo3 = future.getWithTimeout[FollowerInfo](1000)
+    val followerInfo3 = future.getWithTimeout[FollowerDebugInfo](1000)
     println(">>>" + followerInfo3)
 
     println("system started")

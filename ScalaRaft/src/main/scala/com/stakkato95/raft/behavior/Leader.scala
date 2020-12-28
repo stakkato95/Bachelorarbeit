@@ -5,12 +5,13 @@ import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
-import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoResponse
+import com.stakkato95.raft.behavior.Leader.Debug.InfoResponse
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, Debug, LeaderTimerElapsed}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
+import com.stakkato95.raft.debug.LeaderDebugInfo
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
-import com.stakkato95.raft.{LeaderDebugInfo, LeaderInfo, Util}
+import com.stakkato95.raft.{LeaderInfo, Util, debug}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -57,9 +58,9 @@ object Leader {
 
   object Debug {
 
-    final case class LeaderInfoRequest(replyTo: ActorRef[LeaderInfoResponse]) extends Command
+    final case class InfoRequest(replyTo: ActorRef[InfoResponse]) extends Command
 
-    final case class LeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo) extends Command
+    final case class InfoResponse(leaderDebugInfo: LeaderDebugInfo) extends Command
 
   }
 
@@ -116,7 +117,7 @@ class Leader(context: ActorContext[BaseCommand],
       case LeaderTimerElapsed =>
         onLeadershipTimerElapsed()
         this
-      case Debug.LeaderInfoRequest(replyTo) =>
+      case Debug.InfoRequest(replyTo) =>
         onLeaderInfoRequest(replyTo)
         this
       case _ =>
@@ -172,8 +173,8 @@ class Leader(context: ActorContext[BaseCommand],
     }
   }
 
-  private def onLeaderInfoRequest(replyTo: ActorRef[LeaderInfoResponse]): Unit = {
-    replyTo ! Debug.LeaderInfoResponse(LeaderDebugInfo(
+  private def onLeaderInfoRequest(replyTo: ActorRef[InfoResponse]): Unit = {
+    replyTo ! Debug.InfoResponse(debug.LeaderDebugInfo(
       nextIndices = nextIndices,
       pendingItems = pendingItems,
       leaderCommit = leaderCommit

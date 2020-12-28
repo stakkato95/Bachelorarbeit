@@ -2,13 +2,14 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.{FollowerInfo, LeaderInfo}
+import com.stakkato95.raft.{LeaderInfo, debug}
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Client.ClientRequest
 import com.stakkato95.raft.behavior.Follower.Debug.InfoReply
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
+import com.stakkato95.raft.debug.FollowerDebugInfo
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 
 import scala.collection.mutable.ArrayBuffer
@@ -56,7 +57,7 @@ object Follower {
 
     final case class InfoRequest(nodeId: String, replyTo: ActorRef[InfoReply]) extends BaseCommand
 
-    final case class InfoReply(info: FollowerInfo) extends BaseCommand
+    final case class InfoReply(info: FollowerDebugInfo) extends BaseCommand
 
   }
 
@@ -204,7 +205,7 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onInfoRequest(replyTo: ActorRef[InfoReply]): Unit = {
-    replyTo ! InfoReply(FollowerInfo(nodeId, heartBeatTimeout))
+    replyTo ! InfoReply(debug.FollowerDebugInfo(nodeId, heartBeatTimeout))
   }
 
   private def restartHeartbeatTimer() = {

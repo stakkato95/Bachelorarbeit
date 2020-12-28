@@ -5,11 +5,12 @@ import akka.actor.typed.{ActorRef, Behavior}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse, ClientStart, ClientStop}
 import com.stakkato95.raft.behavior.Follower.Debug.InfoRequest
 import com.stakkato95.raft.behavior.Leader.Command
-import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoRequest
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.NodeInfoRequest
+import com.stakkato95.raft.behavior.Leader.Debug.InfoRequest
+import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.InfoRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDiscovered}
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.{ClusterItem, FollowerInfo, LeaderDebugInfo, NodeInfo}
+import com.stakkato95.raft.ClusterItem
+import com.stakkato95.raft.debug.{FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
 
 object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
@@ -50,17 +51,17 @@ class Client(context: ActorContext[BaseCommand],
       case ClientStop =>
         Behaviors.stopped
       //
-      case request@BaseRaftBehavior.Debug.NodeInfoRequest(_, _) =>
+      case request@BaseRaftBehavior.Debug.InfoRequest(_, _) =>
         onLogRequest(request)
         this
-      case BaseRaftBehavior.Debug.NodeInfoResponse(nodeInfo) =>
+      case BaseRaftBehavior.Debug.InfoResponse(nodeInfo) =>
         onLogResponse(nodeInfo)
         this
       //
-      case request@Leader.Debug.LeaderInfoRequest(_) =>
+      case request@Leader.Debug.InfoRequest(_) =>
         onLeaderInfoRequest(request)
         this
-      case Leader.Debug.LeaderInfoResponse(leaderDebugInfo) =>
+      case Leader.Debug.InfoResponse(leaderDebugInfo) =>
         onLeaderInfoResponse(leaderDebugInfo)
         this
       //
@@ -89,16 +90,16 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   //
-  private def onLogRequest(logRequest: NodeInfoRequest): Unit = {
+  private def onLogRequest(logRequest: BaseRaftBehavior.Debug.InfoRequest): Unit = {
     getActorWithId(logRequest.nodeId) ! logRequest
   }
 
-  private def onLogResponse(nodeInfo: NodeInfo): Unit = {
+  private def onLogResponse(nodeInfo: NodeDebugInfo): Unit = {
     reentrantPromise.success(nodeInfo)
   }
 
   //
-  private def onLeaderInfoRequest(request: LeaderInfoRequest): Unit = {
+  private def onLeaderInfoRequest(request: Leader.Debug.InfoRequest): Unit = {
     cluster.foreach(_.ref ! request)
   }
 
@@ -111,7 +112,7 @@ class Client(context: ActorContext[BaseCommand],
     getActorWithId(request.nodeId) ! request
   }
 
-  private def onFollowerInfoResponse(followerInfo: FollowerInfo): Unit = {
+  private def onFollowerInfoResponse(followerInfo: FollowerDebugInfo): Unit = {
     reentrantPromise.success(followerInfo)
   }
 

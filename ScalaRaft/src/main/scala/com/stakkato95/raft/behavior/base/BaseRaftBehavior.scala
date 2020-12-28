@@ -4,7 +4,8 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
-import com.stakkato95.raft.{LeaderInfo, NodeInfo}
+import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.debug.NodeDebugInfo
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -14,9 +15,9 @@ object BaseRaftBehavior {
 
     sealed trait DebugCommand extends BaseCommand
 
-    final case class NodeInfoRequest(nodeId: String, replyTo: ActorRef[NodeInfoResponse]) extends DebugCommand
+    final case class InfoRequest(nodeId: String, replyTo: ActorRef[InfoResponse]) extends DebugCommand
 
-    final case class NodeInfoResponse(nodeInfo: NodeInfo) extends DebugCommand
+    final case class InfoResponse(nodeInfo: NodeDebugInfo) extends DebugCommand
 
   }
 
@@ -35,8 +36,8 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
       case NodesDiscovered(nodes) =>
         cluster ++= nodes
         this
-      case Debug.NodeInfoRequest(_, replyTo) =>
-        replyTo ! Debug.NodeInfoResponse(NodeInfo(log = log.toList, stateMachineValue = currentStateMachineValue))
+      case Debug.InfoRequest(_, replyTo) =>
+        replyTo ! Debug.InfoResponse(NodeDebugInfo(log = log.toList, stateMachineValue = currentStateMachineValue))
         this
       case _ =>
         context.log.info("{} received {}", nodeId, msg)
