@@ -14,9 +14,9 @@ object BaseRaftBehavior {
 
     sealed trait DebugCommand extends BaseCommand
 
-    final case class LogRequest(nodeId: String, replyTo: ActorRef[LogResponse]) extends DebugCommand
+    final case class NodeInfoRequest(nodeId: String, replyTo: ActorRef[NodeInfoResponse]) extends DebugCommand
 
-    final case class LogResponse(nodeInfo: NodeInfo) extends DebugCommand
+    final case class NodeInfoResponse(nodeInfo: NodeInfo) extends DebugCommand
   }
 }
 
@@ -33,8 +33,8 @@ abstract class BaseRaftBehavior[T](context: ActorContext[T],
       case NodesDiscovered(nodes) =>
         cluster ++= nodes
         this
-      case Debug.LogRequest(_, replyTo) =>
-        replyTo ! Debug.LogResponse(NodeInfo(log = log.toList, stateMachineValue = currentStateMachineValue))
+      case Debug.NodeInfoRequest(_, replyTo) =>
+        replyTo ! Debug.NodeInfoResponse(NodeInfo(log = log.toList, stateMachineValue = currentStateMachineValue))
         this
       case _ =>
         context.log.info("{} received {}", nodeId, msg)

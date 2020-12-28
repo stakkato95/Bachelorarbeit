@@ -4,12 +4,14 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
-import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, LeaderTimerElapsed}
+import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoResponse
+import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, Debug, LeaderTimerElapsed}
 import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse}
+import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.NodeInfoResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
-import com.stakkato95.raft.{LeaderInfo, Util}
+import com.stakkato95.raft.{LeaderDebugInfo, LeaderInfo, Util}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -53,6 +55,13 @@ object Leader {
   val MAX_LEADER_TIMEOUT_MILLISEC = 2
 
   def LEADER_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_LEADER_TIMEOUT_MILLISEC, MAX_LEADER_TIMEOUT_MILLISEC)
+
+  object Debug {
+
+    final case class LeaderInfoRequest(replyTo: ActorRef[LeaderInfoResponse]) extends Command
+
+    final case class LeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo) extends Command
+  }
 }
 
 
@@ -106,6 +115,9 @@ class Leader(context: ActorContext[BaseCommand],
       case LeaderTimerElapsed =>
         onLeadershipTimerElapsed()
         this
+      case Debug.LeaderInfoRequest(replyTo) =>
+        onLeaderInfoRequest(replyTo)
+        this
       case _ =>
         super.onMessage(msg)
     }
@@ -157,6 +169,14 @@ class Leader(context: ActorContext[BaseCommand],
     } else {
       onAppendEntriesResponseFailure(replyTo)
     }
+  }
+
+  private def onLeaderInfoRequest(replyTo: ActorRef[LeaderInfoResponse]): Unit = {
+    replyTo ! Debug.LeaderInfoResponse(LeaderDebugInfo(
+      nextIndices = nextIndices,
+      pendingItems = pendingItems,
+      leaderCommit = leaderCommit
+    ))
   }
 
   private def onAppendEntriesResponseSuccess(logItemUuid: String,
