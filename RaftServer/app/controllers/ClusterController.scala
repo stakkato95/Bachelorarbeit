@@ -9,8 +9,13 @@ import play.api.mvc.{AbstractController, Action, AnyContent, Request}
 @Singleton
 class ClusterController @Inject()(cc: ClusterControllerComponents) extends AbstractController(cc) {
 
-  def getClusterState: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
-    Ok("hello world")
+//  def getClusterState: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
+//    Ok("hello world")
+//  }
+
+  def getClusterState(): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
+    val state = cc.service.getClusterState()
+    Ok(Json.toJson(state))
   }
 
   def postItemToCluster(): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>

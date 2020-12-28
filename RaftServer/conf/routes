@@ -3,9 +3,10 @@
 # ~~~~
 
 # Map static resources from the /public folder to the /assets URL path
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET         /assets/*file         controllers.Assets.versioned(path="/public", file: Asset)
 
 
 #->      /cluster                   routers.ClusterRouter
 
-POST /cluster/item controllers.ClusterController.postItemToCluster
+POST        /cluster/item         controllers.ClusterController.postItemToCluster
+GET         /cluster/state        controllers.ClusterController.getClusterState
