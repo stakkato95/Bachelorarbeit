@@ -30,6 +30,8 @@ object Main {
     actorSystem ! ClientRequest("c", actorSystem.ref)
     println(">>>" + future.get[String]())
 
+    Thread.sleep(3000)
+
     actorSystem ! Debug.LogRequest("node-1", actorSystem.ref)
     val info1 = future.get[NodeInfo]()
     println(">>>" + info1)
@@ -41,6 +43,7 @@ object Main {
     actorSystem ! Debug.LogRequest("node-3", actorSystem.ref)
     val info3 = future.get[NodeInfo]()
     println(">>>" + info3)
+    
 
     println("system started")
     Await.result(actorSystem.whenTerminated, 20 minutes)

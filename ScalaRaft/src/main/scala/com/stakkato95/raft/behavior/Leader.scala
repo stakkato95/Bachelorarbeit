@@ -176,7 +176,7 @@ class Leader(context: ActorContext[BaseCommand],
           val pendingItem = pendingItems(logItemUuid)
           pendingItems -= logItemUuid
           applyToSimpleStateMachine(pendingItem.logItem)
-          leaderCommit = leaderCommit.map(_ + 1)
+          leaderCommit = if (leaderCommit.isEmpty) Some(0) else leaderCommit.map(_ + 1)
 
           pendingItem.replyTo ! ClientResponse(currentStateMachineValue)
         }
