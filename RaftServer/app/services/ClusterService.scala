@@ -1,17 +1,17 @@
 package services
 
 import akka.actor.typed.ActorSystem
-import com.stakkato95.raft.behavior.RaftClient
-import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientStart}
+import com.stakkato95.raft.behavior.Client
+import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.concurrent.ReentrantPromise
 import javax.inject.Inject
 import models.{ClusterItem, ClusterState, Person}
 
 class ClusterService @Inject()() {
 
-  private val promise = new ReentrantPromise[String]()
+  private val promise = new ReentrantPromise[AnyRef]()
   private val future = promise.future
-  private val actorSystem = ActorSystem(RaftClient(promise), "client")
+  private val actorSystem = ActorSystem(Client(promise), "client")
   actorSystem ! ClientStart
 
   def showPerson(person: Person): Unit = {
@@ -20,7 +20,12 @@ class ClusterService @Inject()() {
 
   def addItemToCluster(item: ClusterItem): ClusterState = {
     actorSystem ! ClientRequest(item.value, actorSystem.ref)
-    val clusterState = future.get()
-    ClusterState(state = clusterState)
+
+    future.get[String]() match {
+      case Some(clusterState) =>
+        ClusterState(state = clusterState)
+      case None =>
+        ClusterState(state = "no state")
+    }
   }
 }
