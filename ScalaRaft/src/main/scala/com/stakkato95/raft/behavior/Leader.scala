@@ -176,8 +176,8 @@ class Leader(context: ActorContext[BaseCommand],
   private def onLeaderInfoRequest(replyTo: ActorRef[InfoResponse]): Unit = {
     replyTo ! Debug.InfoResponse(debug.LeaderDebugInfo(
       nodeId = nodeId,
-      nextIndices = nextIndices,
-      pendingItems = pendingItems,
+      nextIndices = Util.toDebugNextIndices(nextIndices),
+      pendingItems = pendingItems.map(pair => (pair._1, pair._2.toDebugPendingItem)),
       leaderCommit = leaderCommit
     ))
   }

@@ -2,7 +2,7 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.{LeaderInfo, debug}
+import com.stakkato95.raft.{LeaderInfo, Util, debug}
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Client.ClientRequest
 import com.stakkato95.raft.behavior.Follower.Debug.InfoReply
@@ -205,7 +205,10 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onInfoRequest(replyTo: ActorRef[InfoReply]): Unit = {
-    replyTo ! InfoReply(debug.FollowerDebugInfo(nodeId, heartBeatTimeout))
+    replyTo ! InfoReply(debug.FollowerDebugInfo(
+      nodeId = nodeId,
+      heartBeatTimeout = Util.toDebugFiniteDuration(heartBeatTimeout)
+    ))
   }
 
   private def restartHeartbeatTimer() = {

@@ -58,6 +58,7 @@ object Candidate {
     final case class InfoReply(info: CandidateDebugInfo) extends BaseCommand
 
   }
+
 }
 
 class Candidate(context: ActorContext[BaseCommand],
@@ -174,7 +175,7 @@ class Candidate(context: ActorContext[BaseCommand],
       nodeId = nodeId,
       term = term,
       votes = votes,
-      electionTimeout = electionTimeout
+      electionTimeout = Util.toDebugFiniteDuration(electionTimeout)
     ))
   }
 }
