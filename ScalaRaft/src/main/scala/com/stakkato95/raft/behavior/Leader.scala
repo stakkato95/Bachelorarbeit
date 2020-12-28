@@ -3,11 +3,10 @@ package com.stakkato95.raft.behavior
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, Signal}
 import com.stakkato95.raft
+import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoResponse
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, Debug, LeaderTimerElapsed}
-import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse}
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.NodeInfoResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
@@ -61,7 +60,9 @@ object Leader {
     final case class LeaderInfoRequest(replyTo: ActorRef[LeaderInfoResponse]) extends Command
 
     final case class LeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo) extends Command
+
   }
+
 }
 
 

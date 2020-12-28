@@ -4,9 +4,9 @@ import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 import com.stakkato95.raft.LeaderInfo
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
+import com.stakkato95.raft.behavior.Client.ClientRequest
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
-import com.stakkato95.raft.behavior.RaftClient.ClientRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 

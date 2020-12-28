@@ -2,9 +2,9 @@ package com.stakkato95.raft.behavior.base
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.{LeaderInfo, NodeInfo}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
+import com.stakkato95.raft.{LeaderInfo, NodeInfo}
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -17,7 +17,9 @@ object BaseRaftBehavior {
     final case class NodeInfoRequest(nodeId: String, replyTo: ActorRef[NodeInfoResponse]) extends DebugCommand
 
     final case class NodeInfoResponse(nodeInfo: NodeInfo) extends DebugCommand
+
   }
+
 }
 
 abstract class BaseRaftBehavior[T](context: ActorContext[T],

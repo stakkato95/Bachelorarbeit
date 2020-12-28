@@ -1,8 +1,8 @@
 package com.stakkato95.raft
 
 import akka.actor.typed.ActorSystem
-import com.stakkato95.raft.behavior.{Leader, RaftClient}
-import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientStart}
+import com.stakkato95.raft.behavior.{Leader, Client}
+import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.concurrent.ReentrantPromise
 
@@ -16,7 +16,7 @@ object Main {
     val promise = new ReentrantPromise[AnyRef]()
     val future = promise.future
 
-    val actorSystem = ActorSystem(RaftClient(promise), "client")
+    val actorSystem = ActorSystem(Client(promise), "client")
     actorSystem ! ClientStart
     Thread.sleep(10000)
 

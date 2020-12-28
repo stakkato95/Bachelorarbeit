@@ -2,19 +2,17 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.stakkato95.raft.{ClusterItem, LeaderDebugInfo, NodeInfo}
+import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse, ClientStart, ClientStop}
 import com.stakkato95.raft.behavior.Leader.Command
-import com.stakkato95.raft.behavior.Leader.Debug.{LeaderInfoRequest, LeaderInfoResponse}
-import com.stakkato95.raft.behavior.RaftClient.{ClientRequest, ClientResponse, ClientStart, ClientStop}
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.{NodeInfoRequest, NodeInfoResponse}
+import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoRequest
+import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.NodeInfoRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDiscovered}
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.log.LogItem
+import com.stakkato95.raft.{ClusterItem, LeaderDebugInfo, NodeInfo}
 
-object RaftClient {
+object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
-    Behaviors.setup(new RaftClient(_, reentrantPromise))
+    Behaviors.setup(new Client(_, reentrantPromise))
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -26,8 +24,8 @@ object RaftClient {
 
 }
 
-class RaftClient(context: ActorContext[BaseCommand],
-                 reentrantPromise: ReentrantPromise[AnyRef]) extends AbstractBehavior[BaseCommand](context) {
+class Client(context: ActorContext[BaseCommand],
+             reentrantPromise: ReentrantPromise[AnyRef]) extends AbstractBehavior[BaseCommand](context) {
 
   private var order = 0
 
