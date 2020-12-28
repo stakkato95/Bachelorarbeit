@@ -2,9 +2,11 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.behavior.Candidate.{ElectionTimerElapsed, RequestVote, VoteGranted}
+import com.stakkato95.raft.behavior.Candidate.Debug.InfoReply
+import com.stakkato95.raft.behavior.Candidate.{Command, Debug, ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
+import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo}
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 import com.stakkato95.raft.{LeaderInfo, Util}
 
@@ -48,6 +50,14 @@ object Candidate {
   private val MIN_ELECTION_TIMEOUT_MILLISEC = 3000
 
   def ELECTION_TIMEOUT: FiniteDuration = Util.getRandomTimeout(MIN_ELECTION_TIMEOUT_MILLISEC, MAX_ELECTION_TIMEOUT_MILLISEC)
+
+  object Debug {
+
+    final case class InfoRequest(replyTo: ActorRef[InfoReply]) extends BaseCommand
+
+    final case class InfoReply(info: CandidateDebugInfo) extends BaseCommand
+
+  }
 }
 
 class Candidate(context: ActorContext[BaseCommand],
@@ -74,12 +84,18 @@ class Candidate(context: ActorContext[BaseCommand],
     msg match {
       case VoteGranted =>
         onVoteGranted()
+      case RequestVote(anotherCandidateTerm, _, _) =>
+        onRequestVote(anotherCandidateTerm)
+        this
       case AppendEntriesHeartbeat(leaderInfo, leaderCommit) =>
         onAppendEntries(leaderInfo, leaderCommit)
       case AppendEntriesNewLog(leaderInfo, _, _, leaderCommit, _) =>
         onAppendEntries(leaderInfo, leaderCommit)
       case ElectionTimerElapsed =>
         restartElectionProcess()
+        this
+      case Debug.InfoRequest(replyTo) =>
+        onInfoRequest(replyTo)
         this
       case _ =>
         super.onMessage(msg)
@@ -121,13 +137,26 @@ class Candidate(context: ActorContext[BaseCommand],
 
     if (votes == quorumSize) {
       timer.cancel(ElectionTimerElapsed)
+      context.log.info("{} won leadership", nodeId)
       Leader(candidateNodeId, candidateLog, candidateCluster, term.get, currentStateMachineValue)
     } else {
       this
     }
   }
 
-  def onAppendEntries(leaderInfo: LeaderInfo, leaderCommit: Option[Int]): Behavior[BaseCommand] = {
+  private def onRequestVote(anotherCandidateTerm: Int): Unit = {
+    term match {
+      case Some(currentTerm) =>
+        if (anotherCandidateTerm > currentTerm) {
+          Follower(candidateNodeId, Candidate.ELECTION_TIMEOUT, log, cluster, currentStateMachineValue, Some(log.size - 1))
+        }
+      case None =>
+        // Ignore. Should never happen
+        throw new IllegalStateException("ERROR: term is None")
+    }
+  }
+
+  private def onAppendEntries(leaderInfo: LeaderInfo, leaderCommit: Option[Int]): Behavior[BaseCommand] = {
     val t = term match {
       case None => Leader.INITIAL_TERM
       case Some(value) => value
@@ -138,5 +167,14 @@ class Candidate(context: ActorContext[BaseCommand],
     } else {
       this
     }
+  }
+
+  private def onInfoRequest(replyTo: ActorRef[InfoReply]): Unit = {
+    replyTo ! Debug.InfoReply(CandidateDebugInfo(
+      nodeId = nodeId,
+      term = term,
+      votes = votes,
+      electionTimeout = electionTimeout
+    ))
   }
 }

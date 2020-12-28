@@ -10,7 +10,8 @@ import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.InfoRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDiscovered}
 import com.stakkato95.raft.concurrent.ReentrantPromise
 import com.stakkato95.raft.ClusterItem
-import com.stakkato95.raft.debug.{FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
+import com.stakkato95.raft.behavior.Candidate.Debug
+import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
 
 object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
@@ -71,6 +72,13 @@ class Client(context: ActorContext[BaseCommand],
       case Follower.Debug.InfoReply(followerInfo) =>
         onFollowerInfoResponse(followerInfo)
         this
+      //
+      case request@Candidate.Debug.InfoRequest(_) =>
+        onCandidateInfoRequest(request)
+        this
+      case Candidate.Debug.InfoReply(info) =>
+        onCandidateInfoResponse(info)
+        this
     }
   }
 
@@ -100,7 +108,7 @@ class Client(context: ActorContext[BaseCommand],
 
   //
   private def onLeaderInfoRequest(request: Leader.Debug.InfoRequest): Unit = {
-    cluster.foreach(_.ref ! request)
+    sendToAllNodes(request)
   }
 
   private def onLeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo): Unit = {
@@ -116,7 +124,20 @@ class Client(context: ActorContext[BaseCommand],
     reentrantPromise.success(followerInfo)
   }
 
+  //
+  private def onCandidateInfoRequest(request: Candidate.Debug.InfoRequest): Unit = {
+    sendToAllNodes(request)
+  }
+
+  private def onCandidateInfoResponse(candidateInfo: CandidateDebugInfo): Unit = {
+    reentrantPromise.success(candidateInfo)
+  }
+
   private def getActorWithId(nodeId: String): ActorRef[BaseCommand] = {
     cluster.filter(_.nodeId == nodeId).head.ref
+  }
+
+  private def sendToAllNodes(request: BaseCommand): Unit = {
+    cluster.foreach(_.ref ! request)
   }
 }

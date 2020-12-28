@@ -1,11 +1,11 @@
 package com.stakkato95.raft
 
 import akka.actor.typed.ActorSystem
-import com.stakkato95.raft.behavior.{Client, Follower, Leader}
+import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.debug.{FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
+import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -19,6 +19,7 @@ object Main {
 
     val actorSystem = ActorSystem(Client(promise), "client")
     actorSystem ! ClientStart
+
     Thread.sleep(10000)
 
     actorSystem ! ClientRequest("a", actorSystem.ref)
