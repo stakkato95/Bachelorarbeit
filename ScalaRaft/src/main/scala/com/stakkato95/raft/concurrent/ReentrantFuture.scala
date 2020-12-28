@@ -1,6 +1,6 @@
 package com.stakkato95.raft.concurrent
 
-trait ReentrantFuture[T] {
+trait ReentrantFuture {
 
-  def get(): T
+  def get[U](): U
 }
