@@ -2,9 +2,10 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.LeaderInfo
+import com.stakkato95.raft.{FollowerInfo, LeaderInfo}
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Client.ClientRequest
+import com.stakkato95.raft.behavior.Follower.Debug.InfoReply
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
@@ -50,6 +51,15 @@ object Follower {
   private final object HeartbeatTimerElapsed extends Command
 
   private val NO_LOG_ITEMS_APPLIED = -1
+
+  object Debug {
+
+    final case class InfoRequest(nodeId: String, replyTo: ActorRef[InfoReply]) extends BaseCommand
+
+    final case class InfoReply(info: FollowerInfo) extends BaseCommand
+
+  }
+
 }
 
 class Follower(context: ActorContext[BaseCommand],
@@ -89,6 +99,9 @@ class Follower(context: ActorContext[BaseCommand],
         onHeartbeatTimerElapsed()
       case request@ClientRequest(_, _) =>
         onClientRequest(request)
+        this
+      case Debug.InfoRequest(_, replyTo) =>
+        onInfoRequest(replyTo)
         this
       case _ =>
         super.onMessage(msg)
@@ -188,6 +201,10 @@ class Follower(context: ActorContext[BaseCommand],
       case None =>
         context.log.info("{}: no leader for passing ClientRequest", nodeId)
     }
+  }
+
+  private def onInfoRequest(replyTo: ActorRef[InfoReply]): Unit = {
+    replyTo ! InfoReply(FollowerInfo(nodeId, heartBeatTimeout))
   }
 
   private def restartHeartbeatTimer() = {

@@ -3,12 +3,13 @@ package com.stakkato95.raft.behavior
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse, ClientStart, ClientStop}
+import com.stakkato95.raft.behavior.Follower.Debug.InfoRequest
 import com.stakkato95.raft.behavior.Leader.Command
 import com.stakkato95.raft.behavior.Leader.Debug.LeaderInfoRequest
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.NodeInfoRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDiscovered}
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.{ClusterItem, LeaderDebugInfo, NodeInfo}
+import com.stakkato95.raft.{ClusterItem, FollowerInfo, LeaderDebugInfo, NodeInfo}
 
 object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
@@ -62,6 +63,13 @@ class Client(context: ActorContext[BaseCommand],
       case Leader.Debug.LeaderInfoResponse(leaderDebugInfo) =>
         onLeaderInfoResponse(leaderDebugInfo)
         this
+      //
+      case request@Follower.Debug.InfoRequest(_, _) =>
+        onFollowerInfoRequest(request)
+        this
+      case Follower.Debug.InfoReply(followerInfo) =>
+        onFollowerInfoResponse(followerInfo)
+        this
     }
   }
 
@@ -80,20 +88,34 @@ class Client(context: ActorContext[BaseCommand],
     reentrantPromise.success(currentState)
   }
 
+  //
   private def onLogRequest(logRequest: NodeInfoRequest): Unit = {
-    val node = cluster.filter(_.nodeId == logRequest.nodeId).head
-    node.ref ! logRequest
+    getActorWithId(logRequest.nodeId) ! logRequest
   }
 
   private def onLogResponse(nodeInfo: NodeInfo): Unit = {
     reentrantPromise.success(nodeInfo)
   }
 
+  //
   private def onLeaderInfoRequest(request: LeaderInfoRequest): Unit = {
     cluster.foreach(_.ref ! request)
   }
 
   private def onLeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo): Unit = {
     reentrantPromise.success(leaderDebugInfo)
+  }
+
+  //
+  private def onFollowerInfoRequest(request: Follower.Debug.InfoRequest): Unit = {
+    getActorWithId(request.nodeId) ! request
+  }
+
+  private def onFollowerInfoResponse(followerInfo: FollowerInfo): Unit = {
+    reentrantPromise.success(followerInfo)
+  }
+
+  private def getActorWithId(nodeId: String): ActorRef[BaseCommand] = {
+    cluster.filter(_.nodeId == nodeId).head.ref
   }
 }

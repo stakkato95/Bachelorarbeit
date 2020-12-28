@@ -2,5 +2,7 @@ package com.stakkato95.raft.concurrent
 
 trait ReentrantFuture {
 
-  def get[U](): U
+  def getWithTimeout[U](timeoutMillis: Long): Option[U]
+
+  def get[U](): Option[U]
 }

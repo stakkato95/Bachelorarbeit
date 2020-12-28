@@ -1,7 +1,7 @@
 package com.stakkato95.raft
 
 import akka.actor.typed.ActorSystem
-import com.stakkato95.raft.behavior.{Leader, Client}
+import com.stakkato95.raft.behavior.{Client, Follower, Leader}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.concurrent.ReentrantPromise
@@ -47,6 +47,18 @@ object Main {
     actorSystem ! Leader.Debug.LeaderInfoRequest(actorSystem.ref)
     val leaderInfo = future.get[LeaderDebugInfo]()
     println(">>>" + leaderInfo)
+
+    actorSystem ! Follower.Debug.InfoRequest("node-1", actorSystem.ref)
+    val followerInfo1 = future.getWithTimeout[FollowerInfo](1000)
+    println(">>>" + followerInfo1)
+
+    actorSystem ! Follower.Debug.InfoRequest("node-2", actorSystem.ref)
+    val followerInfo2 = future.getWithTimeout[FollowerInfo](1000)
+    println(">>>" + followerInfo2)
+
+    actorSystem ! Follower.Debug.InfoRequest("node-3", actorSystem.ref)
+    val followerInfo3 = future.getWithTimeout[FollowerInfo](1000)
+    println(">>>" + followerInfo3)
 
     println("system started")
     Await.result(actorSystem.whenTerminated, 20 minutes)
