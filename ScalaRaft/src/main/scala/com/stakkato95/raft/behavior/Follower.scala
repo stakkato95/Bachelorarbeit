@@ -2,15 +2,16 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.stakkato95.raft.{LeaderInfo, Util, debug}
 import com.stakkato95.raft.behavior.Candidate.{Command, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Client.ClientRequest
 import com.stakkato95.raft.behavior.Follower.Debug.InfoReply
 import com.stakkato95.raft.behavior.Follower._
 import com.stakkato95.raft.behavior.Leader.AppendEntriesResponse
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.debug.FollowerDebugInfo
+import com.stakkato95.raft.debug.transport.FollowerDebugInfo
+import com.stakkato95.raft.debug.{LogDebugInfo, transport}
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
+import com.stakkato95.raft.{LeaderInfo, Util}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -205,9 +206,11 @@ class Follower(context: ActorContext[BaseCommand],
   }
 
   private def onInfoRequest(replyTo: ActorRef[InfoReply]): Unit = {
-    replyTo ! InfoReply(debug.FollowerDebugInfo(
+    replyTo ! InfoReply(transport.FollowerDebugInfo(
       nodeId = nodeId,
-      heartBeatTimeout = Util.toDebugFiniteDuration(heartBeatTimeout)
+      heartBeatTimeout = Util.toDebugFiniteDuration(heartBeatTimeout),
+      lastApplied = lastApplied,
+      log = LogDebugInfo(log, currentStateMachineValue)
     ))
   }
 

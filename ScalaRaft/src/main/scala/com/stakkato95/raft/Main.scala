@@ -6,7 +6,8 @@ import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseCommand
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
 import com.stakkato95.raft.concurrent.{ReentrantFuture, ReentrantPromise}
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, LogDebugInfo}
+import com.stakkato95.raft.debug.LogDebugInfo
+import com.stakkato95.raft.debug.transport.{FollowerDebugInfo, LeaderDebugInfo}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

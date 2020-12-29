@@ -8,10 +8,11 @@ import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntr
 import com.stakkato95.raft.behavior.Leader.Debug.InfoResponse
 import com.stakkato95.raft.behavior.Leader.{AppendEntriesResponse, Debug, LeaderTimerElapsed}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.debug.LeaderDebugInfo
+import com.stakkato95.raft.debug.transport.LeaderDebugInfo
+import com.stakkato95.raft.debug.{LogDebugInfo, transport}
 import com.stakkato95.raft.log.{LogItem, PendingItem, PreviousLogItem}
 import com.stakkato95.raft.uuid.{DefaultUuid, UuidProvider}
-import com.stakkato95.raft.{LeaderInfo, Util, debug}
+import com.stakkato95.raft.{LeaderInfo, Util}
 
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.FiniteDuration
@@ -174,11 +175,12 @@ class Leader(context: ActorContext[BaseCommand],
   }
 
   private def onLeaderInfoRequest(replyTo: ActorRef[InfoResponse]): Unit = {
-    replyTo ! Debug.InfoResponse(debug.LeaderDebugInfo(
+    replyTo ! Debug.InfoResponse(transport.LeaderDebugInfo(
       nodeId = nodeId,
       nextIndices = Util.toDebugNextIndices(nextIndices),
       pendingItems = pendingItems.map(pair => (pair._1, pair._2.toDebugPendingItem)),
-      leaderCommit = leaderCommit
+      leaderCommit = leaderCommit,
+      log = LogDebugInfo(log, currentStateMachineValue)
     ))
   }
 

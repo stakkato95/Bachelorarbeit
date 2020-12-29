@@ -4,7 +4,7 @@ import akka.actor.typed.ActorSystem
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
+import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 import javax.inject.Inject
 import models.{ClusterItem, ClusterState, StateMachineState}
 
@@ -46,8 +46,8 @@ class ClusterService @Inject()() {
     //TODO test it!
     ClusterState(
       leader = leaderInfo,
-      candidates = candidatesInfo,
-      followers = followersInfo
+      candidates = candidatesInfo.filter(_.isDefined),
+      followers = followersInfo.filter(_.isDefined)
     )
   }
 
@@ -59,6 +59,6 @@ class ClusterService @Inject()() {
 
 object ClusterService {
 
-  private val FUTURE_TIMEOUT_MILLISEC = 500
+  private val FUTURE_TIMEOUT_MILLISEC = 200
 
 }

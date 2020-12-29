@@ -2,16 +2,13 @@ package controllers
 
 import components.ClusterControllerComponents
 import javax.inject.{Inject, Singleton}
-import models.ClusterItem
+import models.{ClusterItem}
+import models.ClusterState._
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AbstractController, Action, AnyContent, Request}
 
 @Singleton
 class ClusterController @Inject()(cc: ClusterControllerComponents) extends AbstractController(cc) {
-
-//  def getClusterState: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
-//    Ok("hello world")
-//  }
 
   def getClusterState(): Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val state = cc.service.getClusterState()

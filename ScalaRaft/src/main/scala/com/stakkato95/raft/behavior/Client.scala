@@ -11,7 +11,8 @@ import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDi
 import com.stakkato95.raft.concurrent.ReentrantPromise
 import com.stakkato95.raft.ClusterItem
 import com.stakkato95.raft.behavior.Candidate.Debug
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, LogDebugInfo}
+import com.stakkato95.raft.debug.LogDebugInfo
+import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 
 object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =

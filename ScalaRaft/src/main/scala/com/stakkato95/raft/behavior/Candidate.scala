@@ -6,7 +6,7 @@ import com.stakkato95.raft.behavior.Candidate.Debug.InfoReply
 import com.stakkato95.raft.behavior.Candidate.{Command, Debug, ElectionTimerElapsed, RequestVote, VoteGranted}
 import com.stakkato95.raft.behavior.Follower.{AppendEntriesHeartbeat, AppendEntriesNewLog}
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior}
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo}
+import com.stakkato95.raft.debug.transport.CandidateDebugInfo
 import com.stakkato95.raft.log.{LogItem, PreviousLogItem}
 import com.stakkato95.raft.{LeaderInfo, Util}
 
