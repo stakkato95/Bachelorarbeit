@@ -3,9 +3,10 @@ package com.stakkato95.raft
 import akka.actor.typed.ActorSystem
 import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
+import com.stakkato95.raft.behavior.base.BaseCommand
 import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
-import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
+import com.stakkato95.raft.concurrent.{ReentrantFuture, ReentrantPromise}
+import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, LogDebugInfo}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -22,6 +23,13 @@ object Main {
 
     Thread.sleep(10000)
 
+    workflow1(actorSystem, future)
+
+    println("system started")
+    Await.result(actorSystem.whenTerminated, 20 minutes)
+  }
+
+  def workflow1(actorSystem: ActorSystem[BaseCommand], future: ReentrantFuture): Unit = {
     actorSystem ! ClientRequest("a", actorSystem.ref)
     println(">>>" + future.get[String]())
 
@@ -34,15 +42,15 @@ object Main {
     Thread.sleep(3000)
 
     actorSystem ! Debug.InfoRequest("node-1", actorSystem.ref)
-    val info1 = future.get[NodeDebugInfo]()
+    val info1 = future.get[LogDebugInfo]()
     println(">>>" + info1)
 
     actorSystem ! Debug.InfoRequest("node-2", actorSystem.ref)
-    val info2 = future.get[NodeDebugInfo]()
+    val info2 = future.get[LogDebugInfo]()
     println(">>>" + info2)
 
     actorSystem ! Debug.InfoRequest("node-3", actorSystem.ref)
-    val info3 = future.get[NodeDebugInfo]()
+    val info3 = future.get[LogDebugInfo]()
     println(">>>" + info3)
 
 
@@ -61,8 +69,5 @@ object Main {
     actorSystem ! Follower.Debug.InfoRequest("node-3", actorSystem.ref)
     val followerInfo3 = future.getWithTimeout[FollowerDebugInfo](1000)
     println(">>>" + followerInfo3)
-
-    println("system started")
-    Await.result(actorSystem.whenTerminated, 20 minutes)
   }
 }

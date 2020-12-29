@@ -11,7 +11,7 @@ import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDi
 import com.stakkato95.raft.concurrent.ReentrantPromise
 import com.stakkato95.raft.ClusterItem
 import com.stakkato95.raft.behavior.Candidate.Debug
-import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, NodeDebugInfo}
+import com.stakkato95.raft.debug.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo, LogDebugInfo}
 
 object Client {
   def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
@@ -102,7 +102,7 @@ class Client(context: ActorContext[BaseCommand],
     getActorWithId(logRequest.nodeId) ! logRequest
   }
 
-  private def onLogResponse(nodeInfo: NodeDebugInfo): Unit = {
+  private def onLogResponse(nodeInfo: LogDebugInfo): Unit = {
     reentrantPromise.success(nodeInfo)
   }
 

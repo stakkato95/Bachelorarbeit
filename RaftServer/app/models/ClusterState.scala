@@ -4,11 +4,12 @@ import com.stakkato95.raft.debug.{CandidateDebugInfo, DebugFiniteDuration, Debug
 import com.stakkato95.raft.log.LogItem
 import play.api.libs.json.{Format, Json, OWrites, Reads}
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration.{FiniteDuration, TimeUnit}
 
 case class ClusterState(leader: Option[LeaderDebugInfo],
-                        candidates: List[Option[CandidateDebugInfo]],
-                        followers: List[Option[FollowerDebugInfo]])
+                        candidates: ListBuffer[Option[CandidateDebugInfo]],
+                        followers: ListBuffer[Option[FollowerDebugInfo]])
 
 
 object ClusterState {
