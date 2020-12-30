@@ -6,7 +6,7 @@ import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
 import com.stakkato95.raft.concurrent.ReentrantPromise
 import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 import javax.inject.Inject
-import models.{ClusterItem, ClusterState, StateMachineState}
+import models.{ClusterItem, ClusterState, StateMachineValue}
 
 import scala.collection.mutable.ListBuffer
 
@@ -17,14 +17,14 @@ class ClusterService @Inject()() {
   private val actorSystem = ActorSystem(Client(promise), "client")
   actorSystem ! ClientStart
 
-  def addItemToCluster(item: ClusterItem): StateMachineState = {
+  def addItemToCluster(item: ClusterItem): StateMachineValue = {
     actorSystem ! ClientRequest(item.value, actorSystem.ref)
 
     future.get[String]() match {
       case Some(clusterState) =>
-        StateMachineState(state = clusterState)
+        StateMachineValue(value = clusterState)
       case None =>
-        StateMachineState(state = "no state")
+        StateMachineValue(value = "no state")
     }
   }
 
@@ -59,6 +59,6 @@ class ClusterService @Inject()() {
 
 object ClusterService {
 
-  private val FUTURE_TIMEOUT_MILLISEC = 200
+  private val FUTURE_TIMEOUT_MILLISEC = 10
 
 }
