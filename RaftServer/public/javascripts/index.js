@@ -16,9 +16,10 @@ function update() {
 
     $.ajax({
         url: "http://localhost:9000/cluster/state"
-    }).then(function(data) {
-        $("#jsonContent").html(data);
-    }).fail(function(jqXHR, textStatus, errorThrown) {
+    }).then(function (data) {
+        console.log(data)
+        $("#jsonContent").text(JSON.stringify(data));
+    }).fail(function (jqXHR, textStatus, errorThrown) {
         alert(errorThrown);
     });
 }
@@ -29,6 +30,6 @@ function onPageLoaded() {
 
 console.log("Welcome to your Play application's JavaScript!");
 document.addEventListener("DOMContentLoaded", onPageLoaded);
-$(document).ready(function() {
+$(document).ready(function () {
 
 });
