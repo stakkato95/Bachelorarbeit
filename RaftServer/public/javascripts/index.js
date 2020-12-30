@@ -4,24 +4,12 @@ const UI_UPDATE_INTERVAL = 1000
 
 function update() {
     // $.ajax({
-    //     url: "localhost:9000/cluster/state",
-    //     success: function (result) {
-    //         $("#jsonContent").html(result);
-    //     },
-    //     error: function (xhr, ajaxOptions, thrownError) {
-    //         alert(xhr.status);
-    //         alert(thrownError);
-    //     }
+    //     url: "http://localhost:9000/cluster/state"
+    // }).then(function (data) {
+    //     $("#jsonContent").text(data.leader.nodeId);
+    // }).fail(function (jqXHR, textStatus, errorThrown) {
+    //     alert(errorThrown);
     // });
-
-    $.ajax({
-        url: "http://localhost:9000/cluster/state"
-    }).then(function (data) {
-        console.log(data)
-        $("#jsonContent").text(JSON.stringify(data));
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-        alert(errorThrown);
-    });
 }
 
 function onPageLoaded() {
