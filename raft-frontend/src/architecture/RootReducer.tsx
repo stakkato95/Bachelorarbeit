@@ -3,13 +3,13 @@ import {
 } from './RootActions';
 
 export const sessionInitialState = {
-    state: {},
+    clusterState: {},
 };
 
 export const reducer = (state = sessionInitialState, action: any) => {
     switch (action.type) {
         case SET_CLUSTER_STATE:
-            return Object.assign({}, state, action.state);
+            return Object.assign({}, state, { clusterState: action.state });
     }
     return state;
 };

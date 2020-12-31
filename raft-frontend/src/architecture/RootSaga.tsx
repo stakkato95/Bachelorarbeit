@@ -7,7 +7,7 @@ import { api } from './ApiConfig';
 function* getClusterState() {
     try {
         let response = yield api().get('/state');
-        yield put(setClusterState(response.data.payload))
+        yield put(setClusterState(response.data))
     } catch (e) {
         console.log(e);
         //ignore
