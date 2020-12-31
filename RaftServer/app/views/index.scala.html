@@ -23,8 +23,8 @@
         </section>
         <div style="padding: 16px">
             <div id="leaderContainer">
-                <h6>Leader</h6>
-                <p id="nodeId">Node id:</p>
+                <h1>Leader</h1>
+                <p id="nodeId"></p>
                 <p>Next indices:</p>
                 <table id="nextIndicesTable">
                     <tbody>
@@ -34,17 +34,26 @@
                         </tr>
                     </tbody>
                 </table>
-                <p id="pendingItems">Pending items:</p>
-                <p id="leaderCommit">Leader commit:</p>
-                <p id="log">Log:</p>
+                <p id="leaderCommit"></p>
+                <p id="stateMachineValue"></p>
+                <div id="leaderLogContainer">
+                    <p>Log</p>
+                    <table id="logItemsTable">
+                        <tbody>
+                            <tr>
+                                <th>Leader term</th>
+                                <th>Value</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div id="candidatesContainer">
+            <div id="candidatesContainer" style="margin-top: 16px">
                 <h6>Candidates</h6>
             </div>
-            <div id="followersContainer">
+            <div id="followersContainer" style="margin-top: 16px">
                 <h6>Followers</h6>
             </div>
-            @* <p id="jsonContent"></p>*@
         </div>
     </body>
 

@@ -2,10 +2,10 @@
 
 const UI_UPDATE_INTERVAL = 1000
 
-function refreshTable(tableId, content) {
+function refreshTableFromMap(tableId, content) {
     $(tableId).find("tr:gt(0)").remove()
     for (const [key, value] of Object.entries(content)) {
-        $('#nextIndicesTable tr:last').after(
+        $(`${tableId} tr:last`).after(
             `<tr>
                 <td>${key}</td><td>${value}</td>
             </tr>`
@@ -13,12 +13,39 @@ function refreshTable(tableId, content) {
     }
 }
 
+function refreshTableFromArray(tableId, content, itemPrint) {
+    $(tableId).find("tr:gt(0)").remove()
+    for (const item of content) {
+        $(`${tableId} tr:last`).after(`<tr>${itemPrint(item)}</tr>`)
+    }
+}
+
 function setLeader(leader) {
     $("#leaderContainer #nodeId").text("Node id: " + leader.nodeId)
-    refreshTable("#nextIndicesTable", leader.nextIndices)
-    $("#leaderContainer #pendingItems").text("Pending items: " + JSON.stringify(leader.pendingItems))
-    $("#leaderContainer #leaderCommit").text("Leader commit: " + JSON.stringify(leader.leaderCommit))
-    $("#leaderContainer #log").text("Log: " + JSON.stringify(leader.log))
+
+    refreshTableFromMap("#nextIndicesTable", leader.nextIndices)
+
+    if (leader.leaderCommit === undefined) {
+        $("#leaderContainer").hide()
+    } else {
+        $("#leaderCommit").show()
+        $("#leaderCommit").text("Leader commit: " + leader.leaderCommit)
+    }
+
+    if (leader.log.stateMachineValue === "") {
+        $("#leaderContainer #stateMachineValue").hide()
+    } else {
+        $("#leaderContainer #stateMachineValue").show()
+        $("#leaderContainer #stateMachineValue").text("State machine value: " + stateMachineValue)
+    }
+
+    if (leader.log.log.length) {
+        refreshTableFromArray(
+            "#logItemsTable",
+            leader.log.log,
+            item => `<td>${item.leaderTerm}</td><td>${item.value}</td>`
+        )
+    }
 }
 
 function update() {
@@ -28,7 +55,6 @@ function update() {
         if (data.leader !== undefined) {
             setLeader(data.leader)
         }
-
     }).fail(function (jqXHR, textStatus, errorThrown) {
         // alert(errorThrown)
     })
