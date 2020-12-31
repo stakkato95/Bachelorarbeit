@@ -76,8 +76,6 @@ export default function Leader(props: any) {
 
     let leaderCommit = leader.leaderCommit === undefined ? "(no values commited yet)" : leader.leaderCommit
 
-    console.log(leader)
-
     return (<>
         <Typography variant="h4" gutterBottom>Leader info</Typography>
         <List className={classes.root}>
