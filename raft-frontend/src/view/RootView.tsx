@@ -2,10 +2,10 @@ import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 
 import { makeStyles } from '@material-ui/core/styles';
-import Paper from '@material-ui/core/Paper';
-import Grid from '@material-ui/core/Grid';
+import { Paper, Grid, Typography } from '@material-ui/core';
 
 import { getClusterState } from '../architecture/RootActions';
+import Leader from './Leader';
 
 const useStyles = makeStyles((theme) => ({
     root: {
@@ -29,14 +29,22 @@ export default function RootView() {
     });
 
     if (clusterState.leader === undefined) {
-        return (<div>loading...</div>)
+        return (<Typography
+            gutterBottom
+            variant='subtitle1'
+            align='center'
+            style={{ marginTop: '16px' }}>
+            Starting cluster...
+        </Typography>);
     }
 
     return (
         <div className={classes.root}>
             <Grid container spacing={3}>
                 <Grid item xs>
-                    <Paper className={classes.paper}>{clusterState.leader.nodeId}</Paper>
+                    <Paper className={classes.paper}>
+                        <Leader leader={clusterState.leader} />
+                    </Paper>
                 </Grid>
                 <Grid item xs>
                     <Paper className={classes.paper}>xs</Paper>
