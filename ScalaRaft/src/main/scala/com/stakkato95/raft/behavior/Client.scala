@@ -95,7 +95,8 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onClientResponse(currentState: String): Unit = {
-    reentrantPromise.success(currentState)
+    //reentrantPromise.success(currentState)
+    context.log.info("Current cluster state {}", currentState)
   }
 
   //

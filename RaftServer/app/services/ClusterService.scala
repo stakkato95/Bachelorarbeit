@@ -17,15 +17,15 @@ class ClusterService @Inject()() {
   private val actorSystem = ActorSystem(Client(promise), "client")
   actorSystem ! ClientStart
 
-  def addItemToCluster(item: ClusterItem): StateMachineValue = {
+  def addItemToCluster(item: ClusterItem): Unit = {
     actorSystem ! ClientRequest(item.value, actorSystem.ref)
 
-    future.get[String]() match {
-      case Some(clusterState) =>
-        StateMachineValue(value = clusterState)
-      case None =>
-        StateMachineValue(value = "no state")
-    }
+//    future.get[String]() match {
+//      case Some(clusterState) =>
+//        StateMachineValue(value = clusterState)
+//      case None =>
+//        StateMachineValue(value = "no state")
+//    }
   }
 
   def getClusterState(): ClusterState = {
