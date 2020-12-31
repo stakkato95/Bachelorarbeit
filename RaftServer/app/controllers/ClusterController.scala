@@ -2,7 +2,7 @@ package controllers
 
 import components.ClusterControllerComponents
 import javax.inject.{Inject, Singleton}
-import models.{ClusterItem}
+import models.ClusterItem
 import models.ClusterState._
 import play.api.libs.json.{JsError, JsSuccess, Json}
 import play.api.mvc.{AbstractController, Action, AnyContent, Request}

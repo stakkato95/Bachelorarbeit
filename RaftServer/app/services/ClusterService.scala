@@ -43,7 +43,6 @@ class ClusterService @Inject()() {
     requestFollowerInfo(followersInfo, "node-2")
     requestFollowerInfo(followersInfo, "node-3")
 
-    //TODO test it!
     ClusterState(
       leader = leaderInfo,
       candidates = candidatesInfo.filter(_.isDefined),
