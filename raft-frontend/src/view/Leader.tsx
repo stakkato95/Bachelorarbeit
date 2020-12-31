@@ -102,7 +102,7 @@ export default function Leader(props: any) {
                         <BeachAccessIcon />
                     </Avatar>
                 </ListItemAvatar>
-                <ListItemText primary="Next indices"/>
+                <ListItemText primary="Next indices" />
                 {openNextIndices ? <ExpandLess /> : <ExpandMore />}
             </ListItem>
             <Collapse in={openNextIndices} timeout="auto" unmountOnExit>
@@ -117,9 +117,7 @@ export default function Leader(props: any) {
                         <TableBody>
                             {Object.keys(leader.nextIndices).map((itemKey, i) => (
                                 <TableRow key={itemKey}>
-                                    <TableCell component="th" scope="row">
-                                        {itemKey}
-                                    </TableCell>
+                                    <TableCell component="th" scope="row">{itemKey}</TableCell>
                                     <TableCell align="center">{leader.nextIndices[itemKey]}</TableCell>
                                 </TableRow>
                             ))}
@@ -134,7 +132,7 @@ export default function Leader(props: any) {
                         <BeachAccessIcon />
                     </Avatar>
                 </ListItemAvatar>
-                <ListItemText primary="Pending items"/>
+                <ListItemText primary="Pending items" />
                 {openPendingItems ? <ExpandLess /> : <ExpandMore />}
             </ListItem>
             <Collapse in={openPendingItems} timeout="auto" unmountOnExit>
@@ -142,19 +140,22 @@ export default function Leader(props: any) {
                     <Table className={classes.table} aria-label="simple table">
                         <TableHead>
                             <TableRow>
-                                <TableCell>Akka node name</TableCell>
-                                <TableCell align="center">Next index</TableCell>
+                                <TableCell>Pending item UUID</TableCell>
+                                <TableCell align="center">Leader term</TableCell>
+                                <TableCell align="center">Value</TableCell>
+                                <TableCell align="center">Votes</TableCell>
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {Object.keys(leader.nextIndices).map((itemKey, i) => (
-                                <TableRow key={itemKey}>
-                                    <TableCell component="th" scope="row">
-                                        {itemKey}
-                                    </TableCell>
-                                    <TableCell align="center">{leader.nextIndices[itemKey]}</TableCell>
-                                </TableRow>
-                            ))}
+                            {Object.keys(leader.pendingItems).map((itemKey, i) => {
+                                let item = leader.pendingItems[itemKey]
+                                return (<TableRow key={itemKey}>
+                                    <TableCell component="th" scope="row">{itemKey}</TableCell>
+                                    <TableCell align="center">{item.logItem.leaderTerm}</TableCell>
+                                    <TableCell align="center">{item.logItem.value}</TableCell>
+                                    <TableCell align="center">{item.votes}</TableCell>
+                                </TableRow>)
+                            })}
                         </TableBody>
                     </Table>
                 </TableContainer>
