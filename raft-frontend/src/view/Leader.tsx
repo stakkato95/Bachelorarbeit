@@ -15,8 +15,6 @@ import Typography from '@material-ui/core/Typography';
 import Collapse from '@material-ui/core/Collapse';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
-import ListItemIcon from '@material-ui/core/ListItemIcon';
-import StarBorder from '@material-ui/icons/StarBorder';
 
 import Table from '@material-ui/core/Table';
 import TableBody from '@material-ui/core/TableBody';
@@ -25,6 +23,8 @@ import TableContainer from '@material-ui/core/TableContainer';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Paper from '@material-ui/core/Paper';
+
+import Log from './Log';
 
 const useStyles = makeStyles((theme: Theme) =>
     createStyles({
@@ -37,47 +37,24 @@ const useStyles = makeStyles((theme: Theme) =>
             paddingLeft: theme.spacing(4),
         },
         table: {
-            // minWidth: 650,
         },
     }),
 );
-
-
-
-
-
-function createData(name: string, calories: number) {
-    return { name, calories };
-}
-
-const rows = [
-    createData('Frozen yoghurt', 159),
-    createData('Ice cream sandwich', 237),
-    createData('Eclair', 262),
-    createData('Cupcake', 305),
-    createData('Gingerbread', 356),
-];
-
-
-
-
 
 export default function Leader(props: any) {
     const { leader } = props;
     const classes = useStyles();
     const [openNextIndices, setOpenNextIndices] = React.useState(false);
     const [openPendingItems, setOpenPendingItems] = React.useState(false);
-    const handleClickNextIndices = () => {
-        setOpenNextIndices(!openNextIndices);
-    };
-    const handleClickPendingItems = () => {
-        setOpenPendingItems(!openPendingItems);
-    };
+    const [openLog, setOpenLog] = React.useState(false);
+    const handleClickNextIndices = () => setOpenNextIndices(!openNextIndices);
+    const handleClickPendingItems = () => setOpenPendingItems(!openPendingItems);
+    const handleClickLog = () => setOpenLog(!openLog);
 
     let leaderCommit = leader.leaderCommit === undefined ? "(no values commited yet)" : leader.leaderCommit
 
     return (<>
-        <Typography variant="h4" gutterBottom>Leader info</Typography>
+        <Typography variant="h4" gutterBottom>Leader</Typography>
         <List className={classes.root}>
             <ListItem>
                 <ListItemAvatar>
@@ -158,6 +135,21 @@ export default function Leader(props: any) {
                             })}
                         </TableBody>
                     </Table>
+                </TableContainer>
+            </Collapse>
+            {/*  */}
+            <ListItem button onClick={handleClickLog}>
+                <ListItemAvatar>
+                    <Avatar>
+                        <BeachAccessIcon />
+                    </Avatar>
+                </ListItemAvatar>
+                <ListItemText primary="Log" />
+                {openLog ? <ExpandLess /> : <ExpandMore />}
+            </ListItem>
+            <Collapse in={openLog} timeout="auto" unmountOnExit>
+                <TableContainer component={Paper}>
+                    <Log log={leader.log}/>
                 </TableContainer>
             </Collapse>
         </List>
