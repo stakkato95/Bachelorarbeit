@@ -2,15 +2,11 @@ package com.stakkato95.raft.behavior
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
+import com.stakkato95.raft.ClusterItem
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientResponse, ClientStart, ClientStop}
-import com.stakkato95.raft.behavior.Follower.Debug.InfoRequest
 import com.stakkato95.raft.behavior.Leader.Command
-import com.stakkato95.raft.behavior.Leader.Debug.InfoRequest
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug.InfoRequest
 import com.stakkato95.raft.behavior.base.{BaseCommand, BaseRaftBehavior, NodesDiscovered}
 import com.stakkato95.raft.concurrent.ReentrantPromise
-import com.stakkato95.raft.ClusterItem
-import com.stakkato95.raft.behavior.Candidate.Debug
 import com.stakkato95.raft.debug.LogDebugInfo
 import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 

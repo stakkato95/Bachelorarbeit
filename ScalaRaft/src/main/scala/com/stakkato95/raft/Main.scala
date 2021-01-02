@@ -1,12 +1,10 @@
 package com.stakkato95.raft
 
 import akka.actor.typed.ActorSystem
-import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
 import com.stakkato95.raft.behavior.base.BaseCommand
-import com.stakkato95.raft.behavior.base.BaseRaftBehavior.Debug
+import com.stakkato95.raft.behavior.{Client, Follower, Leader}
 import com.stakkato95.raft.concurrent.{ReentrantFuture, ReentrantPromise}
-import com.stakkato95.raft.debug.LogDebugInfo
 import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 
 import scala.concurrent.Await
@@ -52,17 +50,17 @@ object Main {
 
     Thread.sleep(3000)
 
-//    actorSystem ! Debug.InfoRequest("node-1", actorSystem.ref)
-//    val info1 = future.get[LogDebugInfo]()
-//    println(">>>" + info1)
-//
-//    actorSystem ! Debug.InfoRequest("node-2", actorSystem.ref)
-//    val info2 = future.get[LogDebugInfo]()
-//    println(">>>" + info2)
-//
-//    actorSystem ! Debug.InfoRequest("node-3", actorSystem.ref)
-//    val info3 = future.get[LogDebugInfo]()
-//    println(">>>" + info3)
+    //    actorSystem ! Debug.InfoRequest("node-1", actorSystem.ref)
+    //    val info1 = future.get[LogDebugInfo]()
+    //    println(">>>" + info1)
+    //
+    //    actorSystem ! Debug.InfoRequest("node-2", actorSystem.ref)
+    //    val info2 = future.get[LogDebugInfo]()
+    //    println(">>>" + info2)
+    //
+    //    actorSystem ! Debug.InfoRequest("node-3", actorSystem.ref)
+    //    val info3 = future.get[LogDebugInfo]()
+    //    println(">>>" + info3)
 
 
     actorSystem ! Leader.Debug.InfoRequest(actorSystem.ref)
