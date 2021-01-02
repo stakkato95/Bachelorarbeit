@@ -2,50 +2,74 @@ package services
 
 import akka.actor.typed.ActorSystem
 import com.stakkato95.raft.behavior.Client.{ClientRequest, ClientStart}
+import com.stakkato95.raft.behavior.base.BaseCommand
 import com.stakkato95.raft.behavior.{Candidate, Client, Follower, Leader}
-import com.stakkato95.raft.concurrent.ReentrantPromise
+import com.stakkato95.raft.concurrent.{ReentrantFuture, ReentrantPromise}
 import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 import javax.inject.Inject
-import models.{ClusterItem, ClusterState, StateMachineValue}
+import models.{ClusterItem, ClusterState}
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.collection.mutable.ListBuffer
 
-class ClusterService @Inject()() {
+class ClusterService @Inject()(actorSystem: akka.actor.ActorSystem)(implicit executionContext: ExecutionContext) {
 
-  private val replicationPromise = new ReentrantPromise[String]()
-  private val leaderPromise = new ReentrantPromise[LeaderDebugInfo]()
-  private val followersPromise = new ReentrantPromise[FollowerDebugInfo]()
-  private val candidatesPromise = new ReentrantPromise[CandidateDebugInfo]()
-  private val replicationFuture = replicationPromise.future
-  private val leaderFuture = leaderPromise.future
-  private val followersFuture = followersPromise.future
-  private val candidatesFuture = candidatesPromise.future
-  private val actorSystem = ActorSystem(
-    Client(replicationPromise, leaderPromise, followersPromise, candidatesPromise),
-    "client"
-  )
-  actorSystem ! ClientStart
+  private var replicationPromise: Option[ReentrantPromise[String]] = None
+  private var leaderPromise: Option[ReentrantPromise[LeaderDebugInfo]] = None
+  private var followersPromise: Option[ReentrantPromise[FollowerDebugInfo]] = None
+  private var candidatesPromise: Option[ReentrantPromise[CandidateDebugInfo]] = None
+
+  private var replicationFuture: Option[ReentrantFuture[String]] = None
+  private var leaderFuture: Option[ReentrantFuture[LeaderDebugInfo]] = None
+  private var followersFuture: Option[ReentrantFuture[FollowerDebugInfo]] = None
+  private var candidatesFuture: Option[ReentrantFuture[CandidateDebugInfo]] = None
+
+  private var raftActorSystem: Option[ActorSystem[BaseCommand]] = None
+
+  actorSystem.scheduler.scheduleOnce(5 seconds) {
+    replicationPromise = Some(new ReentrantPromise[String]())
+    leaderPromise = Some(new ReentrantPromise[LeaderDebugInfo]())
+    followersPromise = Some(new ReentrantPromise[FollowerDebugInfo]())
+    candidatesPromise = Some(new ReentrantPromise[CandidateDebugInfo]())
+    replicationFuture = Some(replicationPromise.get.future)
+    leaderFuture = Some(leaderPromise.get.future)
+    followersFuture = Some(followersPromise.get.future)
+    candidatesFuture = Some(candidatesPromise.get.future)
+
+    raftActorSystem = Some(ActorSystem(
+      Client(replicationPromise.get, leaderPromise.get, followersPromise.get, candidatesPromise.get),
+      "client"
+    ))
+    raftActorSystem.get ! ClientStart
+  }
 
   def addItemToCluster(item: ClusterItem): Unit = {
-    actorSystem ! ClientRequest(item.value, actorSystem.ref)
+    if (raftActorSystem.isEmpty) {
+      return
+    }
 
-//    future.get[String]() match {
-//      case Some(clusterState) =>
-//        StateMachineValue(value = clusterState)
-//      case None =>
-//        StateMachineValue(value = "no state")
-//    }
+    raftActorSystem.get ! ClientRequest(item.value, raftActorSystem.get.ref)
   }
 
   def getClusterState(): ClusterState = {
-    actorSystem ! Leader.Debug.InfoRequest(actorSystem.ref)
-    val leaderInfo = leaderFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    if (raftActorSystem.isEmpty) {
+      return ClusterState(
+        leader = None,
+        candidates = ListBuffer(),
+        followers = ListBuffer()
+      )
+    }
+
+    raftActorSystem.get ! Leader.Debug.InfoRequest(raftActorSystem.get.ref)
+    val leaderInfo = leaderFuture.get.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
 
     val candidatesInfo = ListBuffer[Option[CandidateDebugInfo]]()
-    actorSystem ! Candidate.Debug.InfoRequest(actorSystem.ref)
-    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
-    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
-    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    raftActorSystem.get ! Candidate.Debug.InfoRequest(raftActorSystem.get.ref)
+    candidatesInfo += candidatesFuture.get.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    candidatesInfo += candidatesFuture.get.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    candidatesInfo += candidatesFuture.get.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
 
     val followersInfo = ListBuffer[Option[FollowerDebugInfo]]()
     requestFollowerInfo(followersInfo, "node-1")
@@ -60,8 +84,8 @@ class ClusterService @Inject()() {
   }
 
   private def requestFollowerInfo(followersInfo: ListBuffer[Option[FollowerDebugInfo]], nodeId: String): Unit = {
-    actorSystem ! Follower.Debug.InfoRequest(nodeId, actorSystem.ref)
-    followersInfo += followersFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    raftActorSystem.get ! Follower.Debug.InfoRequest(nodeId, raftActorSystem.get.ref)
+    followersInfo += followersFuture.get.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
   }
 }
 

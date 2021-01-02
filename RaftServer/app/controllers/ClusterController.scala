@@ -20,8 +20,6 @@ class ClusterController @Inject()(cc: ClusterControllerComponents) extends Abstr
       case Some(json) =>
         Json.fromJson[ClusterItem](json) match {
           case JsSuccess(value, _) =>
-//            val clusterState = cc.service.addItemToCluster(value)
-//            Accepted(Json.toJson(clusterState))
             cc.service.addItemToCluster(value)
             Accepted(s"Item was replicated")
           case JsError(_) =>
