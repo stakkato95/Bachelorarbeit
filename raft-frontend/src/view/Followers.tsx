@@ -21,7 +21,7 @@ const useStyles = makeStyles((theme: Theme) =>
     }),
 );
 
-export default function Leader(props: any) {
+export default function Followers(props: any) {
     const { followers } = props;
     const classes = useStyles();
 
