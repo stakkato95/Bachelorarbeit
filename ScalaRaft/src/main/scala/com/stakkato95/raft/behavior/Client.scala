@@ -15,8 +15,11 @@ import com.stakkato95.raft.debug.LogDebugInfo
 import com.stakkato95.raft.debug.transport.{CandidateDebugInfo, FollowerDebugInfo, LeaderDebugInfo}
 
 object Client {
-  def apply(reentrantPromise: ReentrantPromise[AnyRef]): Behavior[BaseCommand] =
-    Behaviors.setup(new Client(_, reentrantPromise))
+  def apply(replicationPromise: ReentrantPromise[String],
+            leaderPromise: ReentrantPromise[LeaderDebugInfo],
+            followersPromise: ReentrantPromise[FollowerDebugInfo],
+            candidatesPromise: ReentrantPromise[CandidateDebugInfo]): Behavior[BaseCommand] =
+    Behaviors.setup(new Client(_, replicationPromise, leaderPromise, followersPromise, candidatesPromise))
 
   final case class ClientRequest(value: String, replyTo: ActorRef[ClientResponse]) extends Command
 
@@ -29,7 +32,10 @@ object Client {
 }
 
 class Client(context: ActorContext[BaseCommand],
-             reentrantPromise: ReentrantPromise[AnyRef]) extends AbstractBehavior[BaseCommand](context) {
+             replicationPromise: ReentrantPromise[String],
+             leaderPromise: ReentrantPromise[LeaderDebugInfo],
+             followersPromise: ReentrantPromise[FollowerDebugInfo],
+             candidatesPromise: ReentrantPromise[CandidateDebugInfo]) extends AbstractBehavior[BaseCommand](context) {
 
   private var order = 0
 
@@ -95,8 +101,8 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onClientResponse(currentState: String): Unit = {
-    //reentrantPromise.success(currentState)
-    context.log.info("Current cluster state {}", currentState)
+    replicationPromise.success(currentState)
+    //context.log.info("Current cluster state {}", currentState)
   }
 
   //
@@ -105,7 +111,7 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onLogResponse(nodeInfo: LogDebugInfo): Unit = {
-    reentrantPromise.success(nodeInfo)
+    //reentrantPromise.success(nodeInfo)
   }
 
   //
@@ -114,7 +120,7 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onLeaderInfoResponse(leaderDebugInfo: LeaderDebugInfo): Unit = {
-    reentrantPromise.success(leaderDebugInfo)
+    leaderPromise.success(leaderDebugInfo)
   }
 
   //
@@ -123,7 +129,7 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onFollowerInfoResponse(followerInfo: FollowerDebugInfo): Unit = {
-    reentrantPromise.success(followerInfo)
+    followersPromise.success(followerInfo)
   }
 
   //
@@ -132,7 +138,7 @@ class Client(context: ActorContext[BaseCommand],
   }
 
   private def onCandidateInfoResponse(candidateInfo: CandidateDebugInfo): Unit = {
-    reentrantPromise.success(candidateInfo)
+    candidatesPromise.success(candidateInfo)
   }
 
   private def getActorWithId(nodeId: String): ActorRef[BaseCommand] = {

@@ -5,12 +5,16 @@ import { api } from './ApiConfig';
 
 
 function* getClusterState() {
-    try {
-        let response = yield api().get('/state');
-        yield put(setClusterState(response.data))
-    } catch (e) {
-        console.log(e);
-        //ignore
+    var isFailure = true
+    while (isFailure) {
+        try {
+            let response = yield api().get('/state');
+            isFailure = false;
+            yield put(setClusterState(response.data))
+        } catch (e) {
+            console.log(e);
+            //ignore
+        }
     }
 }
 
@@ -18,7 +22,7 @@ function* replicateValue() {
     const state = yield select();
 
     try {
-        
+
         let clusterItem = { value: state.valueToReplicate }
         console.log(clusterItem)
         yield api().post('/item', clusterItem);

@@ -1,8 +1,8 @@
 package com.stakkato95.raft.concurrent
 
-trait ReentrantFuture {
+trait ReentrantFuture[T] {
 
-  def getWithTimeout[U](timeoutMillis: Long): Option[U]
+  def getWithTimeout(timeoutMillis: Long): Option[T]
 
-  def get[U](): Option[U]
+  def get(): Option[T]
 }

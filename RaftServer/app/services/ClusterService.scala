@@ -12,9 +12,18 @@ import scala.collection.mutable.ListBuffer
 
 class ClusterService @Inject()() {
 
-  private val promise = new ReentrantPromise[AnyRef]()
-  private val future = promise.future
-  private val actorSystem = ActorSystem(Client(promise), "client")
+  private val replicationPromise = new ReentrantPromise[String]()
+  private val leaderPromise = new ReentrantPromise[LeaderDebugInfo]()
+  private val followersPromise = new ReentrantPromise[FollowerDebugInfo]()
+  private val candidatesPromise = new ReentrantPromise[CandidateDebugInfo]()
+  private val replicationFuture = replicationPromise.future
+  private val leaderFuture = leaderPromise.future
+  private val followersFuture = followersPromise.future
+  private val candidatesFuture = candidatesPromise.future
+  private val actorSystem = ActorSystem(
+    Client(replicationPromise, leaderPromise, followersPromise, candidatesPromise),
+    "client"
+  )
   actorSystem ! ClientStart
 
   def addItemToCluster(item: ClusterItem): Unit = {
@@ -30,13 +39,13 @@ class ClusterService @Inject()() {
 
   def getClusterState(): ClusterState = {
     actorSystem ! Leader.Debug.InfoRequest(actorSystem.ref)
-    val leaderInfo = future.getWithTimeout[LeaderDebugInfo](ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    val leaderInfo = leaderFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
 
     val candidatesInfo = ListBuffer[Option[CandidateDebugInfo]]()
     actorSystem ! Candidate.Debug.InfoRequest(actorSystem.ref)
-    candidatesInfo += future.getWithTimeout[CandidateDebugInfo](ClusterService.FUTURE_TIMEOUT_MILLISEC)
-    candidatesInfo += future.getWithTimeout[CandidateDebugInfo](ClusterService.FUTURE_TIMEOUT_MILLISEC)
-    candidatesInfo += future.getWithTimeout[CandidateDebugInfo](ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    candidatesInfo += candidatesFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
 
     val followersInfo = ListBuffer[Option[FollowerDebugInfo]]()
     requestFollowerInfo(followersInfo, "node-1")
@@ -52,7 +61,7 @@ class ClusterService @Inject()() {
 
   private def requestFollowerInfo(followersInfo: ListBuffer[Option[FollowerDebugInfo]], nodeId: String): Unit = {
     actorSystem ! Follower.Debug.InfoRequest(nodeId, actorSystem.ref)
-    followersInfo += future.getWithTimeout[FollowerDebugInfo](ClusterService.FUTURE_TIMEOUT_MILLISEC)
+    followersInfo += followersFuture.getWithTimeout(ClusterService.FUTURE_TIMEOUT_MILLISEC)
   }
 }
 

@@ -1,16 +1,16 @@
 package com.stakkato95.raft.concurrent
 
-class RaftFuture(lock: AnyRef) extends ReentrantFuture {
+class RaftFuture[T](lock: AnyRef) extends ReentrantFuture[T] {
 
-  private var result: Option[AnyRef] = None
+  private var result: Option[T] = None
   private var isValueSet = false
 
-  def set(value: AnyRef): Unit = {
+  def set(value: T): Unit = {
     isValueSet = true
     result = Some(value)
   }
 
-  def getWithTimeout[U](timeoutMillis: Long): Option[U] = {
+  def getWithTimeout(timeoutMillis: Long): Option[T] = {
     //TODO blocks thread forever, if ReentrantPromise.success was called once
     //and will never be called in the future. Implemented with awareness of this risk
 
@@ -18,14 +18,14 @@ class RaftFuture(lock: AnyRef) extends ReentrantFuture {
       lock.wait(timeoutMillis)
       if (isValueSet) {
         isValueSet = false
-        Some(result.get.asInstanceOf[U])
+        Some(result.get)
       } else {
         None
       }
     }
   }
 
-  def get[U](): Option[U] = {
+  def get(): Option[T] = {
     getWithTimeout(0)
   }
 }
