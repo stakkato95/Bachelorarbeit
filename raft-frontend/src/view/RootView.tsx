@@ -8,6 +8,7 @@ import TextField from '@material-ui/core/TextField';
 
 import Leader from './Leader';
 import Followers from './Followers';
+import Candidates from './Candidates';
 
 import { getClusterState, replicateValue, updateValueToReplicate } from '../architecture/RootActions';
 
@@ -74,7 +75,9 @@ export default function RootView() {
                     </Paper>
                 </Grid>
                 <Grid item xs>
-                    <Paper className={classes.paper}>xs</Paper>
+                    <Paper className={classes.paper}>
+                        <Candidates candidates={clusterState.candidates} />
+                    </Paper>
                 </Grid>
             </Grid>
         </div>
