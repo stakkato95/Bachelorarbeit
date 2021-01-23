@@ -120,3 +120,83 @@ Bis auf die Erreichbarkeit können all diese Probleme durch die Kombination spez
 \end{enumerate}
 
 Um die richtige Entscheidung bei der Auswahl eines Algorithmus für den Konsens zu treffen, muss man zuerst die dahinter liegenden theoretischen Grundlagen verstehen, die auch Auswahlkriterien für Konsens-Algorithmen darstellen.
+
+\subsection{Konsens in verteilten Systemen}
+
+Der Konsens über einen Wert erfordert eine Einigung zwischen einer Reihe von Knoten. Einige der Knoten können ausfallen oder auf andere Weise unzuverlässig funktionieren. Deswegen muss der Konsens-Algorithmus fehlertolerant sein. Die Knoten haben die Aufgabe, die geltenden Werte zu ermitteln, miteinander zu kommunizieren und sich auf einen einzigen Wert zu einigen.
+
+Konsens ist ein grundlegendes Problem bei der Steuerung von Multiagentensystemen. Definition von Konsens besagt, dass alle Knoten sich auf einen Mehrheitswert einigen müssen. In diesem Zusammenhang ist es erforderlich, dass sich im verteilten System eine Mehrheit bildet. Die Mehrheit ist immer um einen Knoten größer als die Hälfte aller Knoten, die am Wahlprozess teilnehmen. Ein oder mehrere fehlerhafte Knoten können das resultierende Ergebnis jedoch so verzerren, dass möglicherweise kein Konsens oder ein falsches Ergebnis erzielt wird.
+
+Algorithmen, die den Konsens lösen, wurden entwickelt, um mit einer begrenzten Anzahl fehlerhafter Knoten umzugehen. Ein Knoten wird als fehlerhaft bezeichnet, wenn in diesem Knoten ein Fehler auftritt, durch den der Knoten nicht mehr erreichbar wird. Diese Algorithmen müssen eine Reihe von Anforderungen erfüllen, um nützlich zu sein. Ein Konsens-Algorithmus, der fehlerhafte Knoten toleriert, muss folgende Eigenschaften erfüllen:
+
+\begin{description} 
+	\item[Termination.] Jeder korrekte Knoten entscheidet sich für einen Wert.
+	
+	\item[Integrity.] Wenn alle korrekten Knoten denselben Wert vorschlagen, muss sich jeder korrekte Knoten für diesen Wert entscheiden.
+	
+	\item[Agreement.] Jeder korrekte Knoten muss sich auf den gleichen Wert einigen.
+\end{description}
+
+All diese Kriterien werden durch die grundlegende Eigenschaften verteilter Systeme geprägt. Von diesen Eigenschaften zeichnet man vor allem aus:
+
+
+\begin{description} 
+	\item[Atomarität.] Die wichtigste Eigenschaft aller verteilten Systeme besteht darin, dass ein System auf einen externen Beobachter wie ein einziger Rechner wirken soll. Das System verbirgt Implementierungsdetails und dient als eine Abstraktionsschicht.
+	
+	\item[Widerstandsfähigkeit.] Wie es schon erwähnt wurde, braucht ein System mehrere Replicas, um einem Ausfall zu widerstehen. Die Widerstandsfähigkeit, also die Anzahl der Fehler, die ein System überleben kann, wird mit folgender Formel ausgerechnet:
+	
+	\[
+	T = (n - 1) / 2
+	\]
+	bei der
+	\begin{conditions*}
+		T  &  Anzahl der überstandenen Fehler \\
+		n  &  Anzahl der Knoten im Cluster \\
+	\end{conditions*}
+\end{description}
+
+Nach einem sogenannten \textit{"brain split"} , also wenn eine Verbindung zwischen zwei Rechenzentren (oder Clusters bzw. Gruppen von UAVs) unterbrochen wird, wird nur das Rechenzentrum, das über die Mehrheit aller Rechner verfügt, weiter aktuelle Daten liefern.
+
+Neben den Eigenschaften müssen auch Bausteine für Modellierung verteilter Systeme in Betracht gezogen werden. Zu den grundlegendsten und für das Konsensproblem am relevantesten gehören:
+
+\begin{description} 
+	\item[State Machine Replication (Replikation eines Zustandsautomaten).] In der Informatik ist die Replikation eines Zustandsautomaten eine allgemeine Methode zur Implementierung eines fehlertoleranten Dienstes durch Replikation von Knoten, Koordinierung der Clients und der Replicas. Der Ansatz definiert auch die Richtlinien für das Verständnis und die Entwicklung von Algorithmen für Replikation der Zustandsautomaten.
+	
+	Die Funktionsweise eines replizierten Zustandsautomaten erfordert folgende Schritte:
+	
+	\begin{enumerate}
+		\item Installation der Zustandsautomaten auf mehrere unabhängige Knoten
+		
+		\item Empfang der Client Anfragen, die als Eingabedaten für den Zustandsautomaten dienen
+		
+		\item Anordnung der Eingabedaten
+		
+		\item Anwendung der Eingabedaten nach der ausgewählten Reihenfolge auf jedem Knoten
+		
+		\item Den Clients mit den Ausgabedaten des Zustandsautomaten antworten
+		
+		\item Beobachtung und Überprüfung der Replicas auf Zustandsabweichnungen oder Abweichungen in den Ausgabedaten
+	\end{enumerate}
+
+	Die Replikation eines Zustandsautomaten ist ein rein theoretisches Konzept, es teilt aber das große Problem der fehlertoleranten Replikation in Subprobleme auf. Bei der Lösung dieser Subprobleme können gewisse Kompromisse getroffen werden, welche sich dann als betriebliche Beschränkungen eines Produktivsystems bemerkbar machen könnten. Der 2. Schritt braucht beispielsweise einen Mechanismus, um die Nachrichten zuverlässig zu senden (\textit{Atomic Broadcast}). 3. Schritt - ein theoretisches Framework zur Linearisierung aller Operationen (\textit{eine lineare Anordnung aller Operationen}, als ob sie sequenziell und nicht parallel angewandt wurden, was für hochbelastete verteilte Systeme sehr problematisch ist), 4. Schritt - Definition \textit{eines Zustandsautomaten}, 6. Schritt - ein Algorithmus für Fehlererkennung.
+	
+	\item[Atomic Broadcast (auch Total Order Broadcast).] Es ist ein Broadcast, bei dem alle korrekten Knoten Nachrichten in derselben Reihenfolge empfangen. Die Sendung wird als "atomar" bezeichnet, weil sie entweder an allen Knoten korrekt ankommt oder alle Teilnehmer das Senden abbrechen. Das beschreibt keine spezifische Implementierung, es ist lediglich ein Konzept und ein wichtiger Bestandteil des verteilten Rechnens. Die drei wichtigsten formalen Eigenschaften des Atomic Broadcast sind:
+	
+	\begin{enumerate}
+		\item \textit{Validity} (Gültigkeit). Wenn ein korrekt funktionierender Knoten eine Nachricht abschickt, dann empfängt ein anderer Knoten die Nachricht unvermeidlich.
+		
+		\item \textit{Agreement} (Einigung). Wenn ein korrekt funktionierender Knoten eine Nachricht empfängt, dann empfangen die Nachricht auch alle anderen Knoten.
+		
+		\item \textit{Total order} (Anordnung). Die Anordnung aller empfangenen Nachrichten ist bei allen Knoten gleich.
+	\end{enumerate}
+	
+	In der Realität kann Atomic Broadcast nicht implementiert werden, da die Netzwerke, in denen verteilte Systeme funktionieren, nicht zu 100\% zuverlässig sind, selbst wenn der Netzbetreiber sich sehr bemüht, oder Pakete ein privates Netzwerk nicht verlassen. Betrachtet man Atomic Broadcast nüchtern, muss er in zwei Subkonzepte aufgeteilt werden: \textit{Reliable Broadcast} und \textit{Konsens}. Diese beiden Themen bilden den Schwerpunkt dieses Kapitels.
+	
+	\item[Reliable Broadcast (zuverlässiger Broadcast).] Das Ziel dieses Broadcasts ist einfach: eine Nachricht zuverlässig über einen Cluster zu verbreiten, sodass alle Knoten die Nachricht empfangen und genau einmal verarbeiten. \textit{"Zuverlässig"} bedeutet, dass es auch dann funktionieren sollte, wenn die Verbindungen zwischen Knoten fehlerhaft sind. Eine wichtige Annahme beim Reliable Broadcast lautet: wenn ein Prozess abstürzt und nicht mehr erreichbar ist oder die Netzverbindung einen Fehler erzeugt, wird irgendwann in der Zukunft dieser Prozess erneut gestartet bzw. das Netz wird wieder in Betrieb genommen und nach einem Versuch wird die Nachricht letztendlich zugestellt. Reliable Broadcast ist einfach zu implementiert und übernimmt nur zwei Eigenschaften des Atomic Broadcasts: \textit{Validity} und \textit{Agreement}. Total Order ist die Aufgabe des Konsenses.
+	
+	\item[Consensus (Konsens).] Wie am Anfang dieses Kapitels schon erwähnt, erfordert Konsens die Einigung zwischen Prozessen über die Reihenfolge der in den Cluster geschriebenen Werte. Wären alle Knoten und das Netzwerk zu 100\% korrekt und zuverlässig, bräuchte man den Konsens nicht.
+\end{description}
+
+Diese theoretischen Bausteine sind Grundlagen für zwei Algorithmen, die für die Auflösung des Konsenses in verteilten Systemen besonders wichtig sind: \textit{Paxos} und \textit{Raft}.
+
+\subsection{Paxos und Raft für Konsens in verteilten Systemen}
