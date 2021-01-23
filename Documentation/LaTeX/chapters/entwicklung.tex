@@ -55,7 +55,7 @@ Anwendung des Akka Aktorsystems und seiner Module bringt folgende Vorteile für 
 Akka verfügt über mehrere Kommunikationspatterns. Einige von ihnen sind für Aktorsysteme spezifisch und dienen dazu, ein erklärbares und skalierbares System zu entwickeln. Diese spezifische Patterns sind z.B:
 
 \begin{enumerate}
-	\item Zusendung des Ergebnisses eines Futures (in der Fußnote erklären, was ein Future ist) an sich selbst
+	\item Zusendung des Ergebnisses eines Futures \footnote{Ein Future bezeichnet einen Platzhalter (Proxy) für ein Ergebnis, das noch nicht bekannt ist, meist weil seine Berechnung noch nicht abgeschlossen ist.} an sich selbst
 	
 	\item Per-Session-Child-Actor (Erstellung eines Aktors je Sitzung) in dem ein Elternknoten einen Kindknoten erstellt. Der Kindknoten stellt eine asynchrone Operation dar, die allen anderen Aktoren abfragen muss, das Ergebnis dem Elternknoten zur Verfügung stellt und sich anschließen stoppt. Die Erstellung eines neuen Aktors für jede Anfrage kann verschwenderisch klingen (vor allem in einem eingebetteten System), die Erstellung eines neuen Aktors erfordert allerdings keine Ressourcen des Betriebssystems und ist deswegen sehr billig.
 \end{enumerate}
@@ -128,6 +128,129 @@ Play bietet folgende Vorteile:
 Für die Entwicklung des Frontends wurde React verwendet. React ist ein Framework von Facebook, das eine schnelle (im Vergleich mit reinen JavaScript und HTML) Entwicklung von Webanwendungen ermöglicht.
 
 \section{Beschreibung der Teilkomponenten und Schnittstellen des Systems}
+
+Betrachtet man den entwickelten Prototypen abstrakt, kann er auf drei Bestandteile reduziert werden: das Frontend, das Backend und das Aktorsystem (sehe Abbildung \ref{fig:system}).
+
+\begin{figure}
+	\centering
+	\includegraphics[width=0.7\linewidth]{images/7_system}
+	\caption{Teile des Systems.}
+	\label{fig:system}
+\end{figure}
+
+Das Aktorsystem wurde separat dargestellt, um zu betonen, dass das Aktorsystem eine wichtige und stichhaltige Komponente repräsentiert. Während des Entwicklungsprozesses war diese Ansicht auch dadurch gestützt, dass das Aktorsystem in einem separaten Projekt implementiert wurde. Frontend und Backend wurden ebenfalls in eigenen Projekten implementiert.
+
+Der Prototyp verfügt über mehrere Schnittstellen. Sowohl zwischen den \textit{High-Level-Komponenten} als auch zwischen den \textit{Low-Level-Komponenten}. Zuerst werden die Schnittstellen zwischen den High-Level-Komponenten betrachtet.
+
+\subsection{Schnittstellen zwischen High-Level-Komponenten}
+
+Da es im Prototyp unter den High-Level-Komponenten drei Teile gibt, ergeben sich zwei Schnittstellen:
+
+\begin{enumerate}
+	\item Frontend-Backend Schnittstelle
+	
+	\item Backend-Aktorsystem Schnittstelle
+\end{enumerate}
+
+Die Frontend-Backend Schnittstelle ist eine REST-Schnittstelle. Frontend schickt HTTP-Anfragen an die Backend-Endpoints. Die Endpoints sind in der Tabelle \ref{tab:rest} aufgelistet.
+
+\begin{table} \centering
+	\begin{tabular}{|P{2cm}|P{2cm}|P{3cm}|P{7cm}|} 
+		\hline
+		\textbf{Name} & \textbf{Methode} & \textbf{Pfad} & \textbf{Beschreibung}\\
+		
+		\hline
+		Zustand des Clusters & GET & /cluster/state & Abfrage des Zustandes eines Raft-Clusters. Die resultierende \textit{JSON-String} enthielt Informationen über einen Leader, die Followers und die Kandidaten. Diese Informationen umfassen unter anderem den Zustand des Logs, den Commit-Index (der Index des zuletzt replizierten Logeintrags) und die Nummer des aktuellen Terms.\\
+		
+		\hline
+		Ein neues Element replizieren & POST & /cluster/item & Der Befehl speichert den Wert auf dem Cluster und liefert den aktuellen Zustand des Leader-Logs, wenn der Wert erfolgreich repliziert wurde.\\
+		
+		\hline
+	\end{tabular}
+	\caption{Endpoints der Frontend-Backend Schnittstelle.}
+	\label{tab:rest}
+\end{table}
+
+Die Deklaration der oben erwähnten Endpoints ist in der \textit{routes}-Datei und die Implementierung im \textit{ClusterController} zu finden. Der ClusterController benutzt \textit{ClusterService}, um die Kommunikation zwischen dem Controller und dem Raft-Aktorsystem zu abstrahieren.
+
+Zusätzlich befasst sich der ClusterService mit der Initialisierung des Aktorsystems. Die Initialisierung umfasst folgende Schritte:
+
+\begin{enumerate}
+	\item Erstellung von Promises und Futures
+	
+	\item Erstellung des Aktorsystems. Dabei wird der ClientActor als Root Aktor erstellt.
+	
+	\item Absenden der ClientStart-Nachricht an das System
+\end{enumerate}
+
+Futures sind Kommunikationsschnittstellen, die Ergebnisse an den ClusterService zurückgeben. Eine naheliegende Lösung wäre, anstatt eines Futures eine Callback-Funktion zu verwenden und alle Ergebnisse in diese Funktion zu übergeben. Dies hätte allerdings dem funktionalen Stil von Scala widersprochen. Deswegen wurde die Entscheidung getroffen, Futures zu verwenden. Die Futures, die in Scala verwendet werden, sind dennoch in ihrer eigenen Art herausfordernd:
+
+\begin{description} 
+	\item[Wiederverwendung von Futures.] Bei der Planung des Prototypen wurde die Entscheidung getroffen, dass es zu verschwenderisch sei, für jede Nachricht, die an das Aktorsystem geschickt wird, ein neues Promise und ein neues Future zu erstellen.
+	
+	\item[Timeouts.] Wenn der Zustand des Clusters abgefragt sein muss, schickt der ClusterService Anfragen an das Aktorsystem, um den aktuellen Stand des Leader, Followers und Kandidaten zu erhalten. Am Start des Clusters kann es vorkommen, dass der Zustand dann abgefragt wird, wenn es im Cluster z.B. noch keinen Leader oder keine Kandidaten gibt. In dieser Situation wäre die Zeit der Zustellung eines Ergebnisses undefiniert und unbegrenzt.
+\end{description}
+
+Um diese Herausforderungen zu meistern, wurden \textit{ReentrantPromise} und \textit{ReentrantFuture} erstellt. Die beiden Namen wurden analog zum \textit{ReentrantLock} in Java ausgewählt, um die Wiederverwendbarkeit der Instanzen dieser Klasse hervorzuheben.
+
+ReentrantPromise setzt die Ergebnisse der asynchronen Operationen und ReentrantFuture erlaubt es, diese Ergebnisse mehrmals abzufragen. Das Ergebnis eines standardmäßigen Futures darf nur einmal aufgerufen werden. Wenn das Ergebnis eines Futures zum zweiten Mal abgefragt wird, wird eine Exception ausgelöst. Dies ist ein Schutzmechanismus, um eine unendliche Blockierung des aufrufenden Threads zu vermeiden, wenn das Ergebnis mehr als einmal abgefragt wird.
+
+Die in Scala definierten Futures erlauben es auch nicht ein Timeout bei der Abfrage des Ergebnisses zu setzen. Eine lange Wartezeit ist für benutzerorientierte Services nicht wünschenswert. Um das zu verhindern, wurde im ReentrantFuture eine Methode mit einem Timeout als Übergabewert zum Abfragen des Ergebnisses hinzugefügt. Wenn innerhalb eines Timeouts kein Ergebnis zur Verfügung steht, wird ein leeres Ergebnis zurückgegeben.
+
+Mittels ReentrantFutures werden folgende Informationen aus dem Aktorsystem geliefert:
+
+\begin{enumerate}
+	\item Zustand des jeweiligen Leaders
+	
+	\item eine Liste von Zuständen jedes Followers
+	
+	\item eine Liste von Zuständen jedes Kandidaten
+	
+	\item Zustand des Leader-Logs, nachdem ein neues Element im Cluster repliziert wurde
+\end{enumerate}
+
+Futures werden im Aktorsystem für die Zustellung der Ergebnisse alle Operationen verwendet. Um diese Operationen zu starten, müssen Nachrichten an das System geschickt werden. Beschreibung verwendeter Nachrichten findet man in Tabelle \ref{tab:operations}.
+
+\begin{table} \centering
+	\begin{tabular}{|p{5cm}|p{5cm}|p{5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Beschreibung} & \textbf{Parameter} \\
+		
+		\hline
+		ClientStart & Da kein Discovery-System für Aktoren implementiert wurde, startet diese Nachricht ein manuelles Discovery Verfahren. & keine\\
+
+		\hline
+		Leader.Debug.InfoRequest & Den Zustand des Leaders abfragen, sofern es einen gibt. & replyTo - der Aktor, an den das Ergebnis zugestellt sein muss.\\
+		
+		\hline
+		Candidate.Debug.InfoRequest & Den Zustand der Kandidaten abfragen. & replyTo - der Aktor, an den das Ergebnis zugestellt sein muss.\\
+		
+		\hline
+		Follower.Debug.InfoRequest & Den Zustand der Follower abfragen. & nodeId - Id des Knoten, der Abgefragt sein muss.
+		
+		replyTo - der Aktor, an den das Ergebnis zugestellt sein muss.\\
+		
+		\hline
+		ClientRequest & Einen Wert auf dem Cluster replizieren. & value - der zu replizierende Wert.
+		
+		replyTo - der Aktor, an den das Ergebnis zugestellt sein muss.\\
+				
+		\hline
+	\end{tabular}
+	\caption{Beschreibung der Nachrichten zur Kommunikation mit dem Aktorsystem.}
+	\label{tab:operations}
+\end{table}
+
+Der Aktor, an den das Ergebnis zugestellt wird, ist immer der Client-Aktor. Dieser setzt das Ergebnis als Ergebnis des jeweiligen Promises. Promise liefert das Ergebnis mittels Thread-Synchronisation an Future, sofern das Timeout bei der Abfrage des Ergebnisses noch nicht abgelaufen ist. Das Ergebnis wird vom ClusterService erhalten und an Frontend geschickt.
+
+\section{Kommunikationsprotokoll zwischen den Teilkomponenten und den Knoten in Raft}
+
+
+
+
+
+
+
 
 
 
