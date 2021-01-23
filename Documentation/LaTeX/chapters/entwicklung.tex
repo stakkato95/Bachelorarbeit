@@ -290,17 +290,134 @@ Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen d
 
 \subsection{Definition des Kandidaten in Raft}
 
+Die Übergangsrollen spielen in Raft die Kandidaten. Jeder Follower, dessen Heartbeat-Timer abgelaufen ist, kann zum Kandidaten werden. Der Erfolg des jeweiligen Kandidaten hängt hauptsächlich davon ab, wie kurz sein Heartbeat Timeout ist.
 
+Nach dem Übergang von einem Follower- in einen Kandidatenzustand, startet der Kandidat einen Election-Timer (Wahl-Timer). Wenn innerhalb der Election-Zeit der Kandidat nicht zum Leader wird oder kein anderer Leader sich mit einer AppendEntries Nachricht meldet, beginnt die nächste Runde des Wahlprozesses. Alle anderen Veränderungen im Zustand eines Kandidaten werden durch empfangene und gesendete Nachricht eingeleitet, die in Tabellen \ref{tab:candidateReceive} bzw. \ref{tab:candidateSend} abgebildet sind.
 
+\begin{table} \centering
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		
+		\hline
+		VoteGranted & kein & - Die Anzahl von Stimmen um 1 inkrementieren
+		
+		- Checken, ob Stimmen schon vom Quorum aller Knoten empfangen wurden. Wenn es der Fall ist, dann zum Leader werden
+		 & keine\\
+		
+		\hline
+		AppendEntries & - Leader-Information (Term und Akka-Referenz auf den Leader) 
+		& - Wenn der Term des Leader größer oder gleich dem Kandidaten-Term ist, dann zum Leader werden & keine\\
+		
+		\hline
+	\end{tabular}
+	\caption{Nachrichten, die ein Kandidat empfangen kann.}
+	\label{tab:candidateReceive}
+\end{table}
 
+\begin{table} \centering
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		
+		\hline
+		RequestVote & - Term des Kandidaten
+		
+		- Akka-Referenz auf den Kandidaten
+		
+		- Der letzte Logeintrag
+		 & Am Start jedes Wahlprozesses & An alle Knoten im Cluster unabhängig von ihren Rollen\\
+		
+		\hline
+	\end{tabular}
+	\caption{Nachrichten, die ein Kandidat aussenden kann.}
+	\label{tab:candidateSend}
+\end{table}
 
+\subsection{Definition des Leaders in Raft}
 
+Der Leader in Raft ist der \textit{Garant des Konsenses} und spielt eine zentrale Rolle. Alle Schreiboperationen erfolgen über den Leader, der dazu noch das Replikationsverfahren steuert und alle Followers am aktuellen Stand hält. Ein Leader existiert innerhalb eines Terms und der Term endet gleich nach dem Absturz des Leaders.
 
+Nachdem ein Kandidat die Wahl gewonnen hat und zum Leader geworden ist, etabliert er sein Leadership durch die erste Heartbeat-Nachricht, die an alle Knoten geschickt wird. Die Heartbeat-Nachricht muss der Leader regelmäßig aussenden, sodass Followers wissen, dass der Leader noch existiert. Deswegen setzt er einen Timer und schickt die Nachricht alle N Sekunden. Diese Zeit N muss unbedingt kleiner sein als die Zeit des Election-Timers eines Followers. Wenn das nicht der Fall ist, werden Followers immer schneller entscheiden, dass der Leader abgestürzt oder nicht mehr erreichbar ist. Unter diesen Umständen kann ein Leader nie ausgewählt werden.
 
+Der Leader ist eine Schnittstelle zwischen Clients und dem Rest des Clusters. Die Nachrichten, die ein Leader aussendet und erhält, sind in Tabellen \ref{tab:leaderReceive} und \ref{tab:leaderSend} aufgelistet.
 
+\begin{table} \centering
+	\begin{tabular}{|P{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		
+		\hline
+		ClientRequest 
+		&
+		- Der zu replizierende Wert
+		
+		- Die Adresse der Knoten, an den das Ergebnis der Replikation geschickt werden muss
+		& 
+		- Einen neuen Eintrag an eigenen Log anhängen
+		
+		- Den neuen Logeintrag auch in die Pending-Item Liste einfügen. Diese Liste enthält Informationen, auf wie vielen Knoten ein Logeintrag schon repliziert wurde.
+		
+		- Eine Append-Entries Nachricht an alle Knoten im Cluster aussenden. So eine Nachricht fungiert auch als ein Heartbeat.
+		 & keine\\
+		 
+		 \hline
+		 AppendEntriesResponse 
+		 &
+		 - Ein boolescher Wert, der zeigt, ob ein Wert auf einem Knoten erfolgreich / nicht erfolgreich repliziert wurde.
+		 
+		 - UUID des Logeintrags in der PendingItems Liste
+		 
+		 - Akka-Referenz auf den Follower, der diese Nachricht geschickt hat
+		 & 
+		 - Wenn ein Wert nicht erfolgreich repliziert wurde, dann ist der Log des Followers immer noch im inkonsistenten Zustand. Man muss 1 von NextIndex subtrahieren und versuchen, den Logeintrag vor dem NextIndex an den Follower zu schicken
+		 
+		 - Wenn ein Wert erfolgreich repliziert wurde, checken, ob das schon beim ersten Versuch erfolgreich war. In diesem Fall muss UUID des Eintrags in PendingItem in der Nachricht vorhanden sein.
+		 
+		 - Wenn ein Wert erfolgreich repliziert wurde aber UUID nicht da ist, dann ist es ein Follower, dessen Log immer noch nicht konsistent ist. Follower bittet um Zusendung des nächsten Logeintrags.
+		 & 
+		 - Wenn ein Wert nicht erfolgreich repliziert wurde, dann AppendEntries mit dem vorherigen Logeintrag schicken
+		 
+		 - Wenn der Wert auf ein Quorum repliziert wurde, Client-Response Nachricht mit dem aktuellen Stand des Zustandsautomaten zurück an den Client schicken
+		 
+		 - Wenn ein Logeintrag bei einem Follower mit dem inkonsistenten Log erfolgreich repliziert wurde, dann AppendEntries mit dem nächsten Logeintrag schicken\\
+		 
+		 \hline
+		 AppendEntriesResponse 
+		 &
+		 
+		 & 
+		 
+		 & keine\\
+		
+		\hline
+	\end{tabular}
+	\caption{Nachrichten, die ein Kandidat aussenden kann.}
+	\label{tab:leaderReceive}
+\end{table}
 
+\begin{table} \centering
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		
+		\hline
+		Heartbeat 
+		&
+		- Leader-Information
+		
+		- Leader-Commit. Es zeigt den Index des letzten Logeintrags, den Leader commited hat.
+		& 
+		Regelmäßig, wenn Leader Timer abläuft
+		& An alle Knoten im Cluster, unabhängig von ihren Rollen\\
+		
+		\hline
+	\end{tabular}
+	\caption{Nachrichten, die ein Leader aussenden kann.}
+	\label{tab:leaderSend}
+\end{table}
 
-
+Bei der AppendEntries-Response Nachricht wurde \textit{NextIndex} erwähnt. NextIndex ist ein Map, das Followerreferenzen auf den nächsten Index im Log abbildet. Der jeweilige Follower erwartet diesen Index. Der Leader hält das Map im aktuellen Zustand, um zu wissen, welcher Logeintrag für welchen Follower zu einem Zeitpunkt zugeschickt sein muss, und um sicher zu stellen, dass jeder Log Eintrag genau einmal zugeschickt wird. Es entspricht der \textit{"exactly once"} Nachrichtenzustellungssemantik in verteilten Systemen. Das heißt, die Nachricht darf nicht verloren gehen und darf auch nicht zweimal zugestellt werden.
 
 
 
