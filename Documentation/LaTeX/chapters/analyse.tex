@@ -404,11 +404,88 @@ Der Vergleich in der Tabelle \ref{tab:vergleich} zeigt deutlich, dass Raft durch
 
 \section{Concurrency Modelle für die Umsetzung von verteilten Systemen}
 
+Algorithmen für verteilte Systeme umfassen mehrere Rechner, was ein passendes Concurrency Modell erfordert. Das Concurrency Modell bringt nicht nur die für die Entwicklung des Systems benötigten Bausteine und Abstraktionen, sondern auch ein \textit{Kommunikationsmuster}. Dies wird in Form eines Frameworks und einer Bibliothek zur Verfügung gestellt bzw. direkt in der Programmiersprache implementiert. Dieses Kapitel beschäftigt sich mit diesen Aufgaben.
 
+\subsection{Concurrency in eingebetteten Systemen}
 
+Moderne Hardware- und Softwaresysteme verfügen über mehrere Funktionen. Eine Drohne muss sich z.B. im Raum lokalisieren, ein Modell vom Raum erstellen und die Aktuatoren steuern können. Zusätzlich muss sie mit einer Bodenstation oder mit der Cloud verbunden sein. Die von der Cloud oder von der Bodenstation empfangenen Daten und Signale könnten auch für die Steuerung von Aktuatoren notwendig sein. Das bedeutet, dass diese Funktionen miteinander zu kommunizieren können müssen.
 
+Außerdem muss eine sich in einem Schwarm befindliche Drohne stets in der Lage sein, mit anderen Drohnen zu kommunizieren oder als Schwarm-Leader die von der Cloud oder der Bodenstation empfangenen Daten an den Rest des Schwarms weiterzuleiten. Von Vorteil ist dabei, wenn das Programmiermodell für die Drohnen- und Serversoftware den gleichen Ansatz für die Verteilung von Rechenoperationen und bidirektionale Kommunikation verwendet.
 
+Um diese Anforderungen erfüllen zu können, wird ein Concurrency Modell benötigt. Im Kontext der eingebetteten Systeme muss das Modell folgende Voraussetzungen erfüllen:
 
+\begin{description} 
+	\item[Fehlertoleranz.] Ein Fehler in einer Komponente des Systems darf alle anderen Teile nicht zum Absturz bringen. Fehlerdomänen müssen klar definiert und abgekapselt werden. Die fehlerhafte Softwarekomponente muss ersetzt oder erneut gestartet werden.
+	
+	\item[Bidirektionale Kommunikation.] Concurrent Components des Systems müssen miteinander kommunizieren, idealerweise ohne den intrinsischen Zustand zu teilen. \textit{"Concurrent"} übersetzt auf Deutsch heißt \textit{"nebenläufig"}, und bedeutet, dass zwei Teile eines Programms abwechselnd ausgeführt werden. Das darf nicht mit \textit{"Parallelität"} verwechselt werden (\textit{"parallelism"} auf Englisch), was das Ausführen von zwei Teilen eines Programms zur selben Zeit bedeutet.
+	
+	\item[Verteiltes Rechnen.] Das Concurrency Modell soll im Idealfall den reibungslosen Aufruf von Remote-Services eines verteilten Systems ermöglichen. Das ist für die Verteilung von Tasks in einem Netzwerk von Drohnen und für eine freie Kommunikation mit der Cloud notwendig, dal ein Schwarm von Drohnen auch ein verteiltes IoT \footnote{Internet of Things oder Intrnet der Dinge} System darstellt. Ein sogenanntes IoT System ist ein Netzwerk von physischen Objekten, die mit Sensoren, Aktuatoren, Kommunikationsmodulen und einer Recheneinheit ausgestattet sind. Eine Drohne verfügt über alle diese Komponenten.
+\end{description}
+
+\subsection{Stand der Technik und Vergleich von Concurrency Modellen}
+
+Heutzutage existieren unterschiedliche Concurrency Modelle, die unterschiedliche Hintergründe und Motivationen für ihr Entstehen haben. Erste Modelle wurden 1970 vorgeschlagen und haben sich mit der Zeit geändert, wurden verbessert und an die Anforderungen moderner Software angepasst. Im Folgenden werden die Stärken und Schwächen der Modelle sorgfältig untersucht und verglichen.
+
+\begin{description} 
+	\item[Threads und Mutex.] Dies ist ein klassisches Modell, welches in der Industrie schon seit Jahrzehnten im Einsatz ist. Dieses Modell ist auf den zwei Säulen der Concurrency aufgebaut: Thread und Mutex.
+	
+	\begin{description} 
+		\item[Thread.] Ein Thread is ein Ausführungsstrang bzw. eine Ausführungsreihenfolge in der Abarbeitung eines Programms. Ein Thread ist Teil eines Prozesses. In Concurrenten Programmen (\textit{"concurrent programs"} auf Englisch) können zwei Threads gleichzeitig auf eine geteilte Variable oder Ressource zugreifen. Wenn das passiert, ist es möglich, dass die Ressource später in einem inkonsistenten Zustand bleibt. Um das zu vermeiden, müssen folgende Voraussetzungen erfüllt werden: der Zugriff auf alle geteilten Ressourcen muss synchronisiert sein. Sowohl der Schreibvorgang als auch der Lesevorgang muss Synchronisation verwenden. Das wird durch den wechselseitigen Ausschluss bzw. Mutex erreicht.
+		
+		\item[Mutex (Wechselseitiger Ausschluss).] Der wechselseitige Ausschluss bezeichnet eine Gruppe von Verfahren, mit denen das Problem \textit{des kritischen Abschnitts} gelöst wird. Das Problem tritt dann auf, wenn zwei Threads auf eine Ressource oder eine geteilte Variable zugreifen wollen. Das Mutex-Verfahren verhindert, dass Concurrent Prozesse bzw. Threads gleichzeitig oder zeitlich verschränkt gemeinsam genutzte Datenstrukturen unkoordiniert verändern, wodurch die Datenstrukturen letztendlich in einem inkonsistenten Zustand bleiben können. Die Faustregel für die Verwendung von Mutex lautet: die Kritische Sektion muss so klein wie möglich gehalten werden und so schnell wie möglich verlassen werden.	
+	\end{description}
+	
+	Da dieses Modell so einfach ist, bieten fast alle Programmiersprachen das Modell in unterschiedlicher Form an.
+	
+	Die primäre Stärke des Threads- und Mutex-Modells ist eine breite Anwendbarkeit. Es kann für eine Vielzahl von Problemen eingesetzt werden. Alle abstrakten Modelle, wie z.B. das \textit{Aktormodell} (actor model) und \textit{CSP} (Communicating Sequential Processes), sind auf dessen Basis gebaut. Da Threads und Mutexes sehr nah an die Hardware gebunden sind, können sie sehr effizient sein, wenn sie richtig verwendet werden. Zusätzlich kann man sie sehr einfach in viele Programmiersprachen integrieren.
+	
+	Außerhalb von einigen experimentellen Systemen mit verteiltem Arbeitsspeicher unterstützen Threads und Mutexes nur Architekturen mit lokalem RAM. Das heißt, Threads und Mutexes sind nicht geeignet für Rechenoperationen, die einen großen Arbeitsspeicher benötigen.
+	
+	\item[Aktormodell.] Das Aktormodell ist ein universelles Concurrent Programmierungsmodell mit einer besonders breiten Anwendbarkeit. Es ist sowohl für lokale als auch für verteilte Speicherarchitekturen gedacht. Das Modell erleichtert geographische Verteilung und unterstützt Fehlertoleranz und Belastbarkeit.
+	Ein Aktor ähnelt einem Objekt in einem objektorientierten Programm. Er sichert die Kapselung des Zustandes und kommuniziert mit den anderen Aktoren mittels Nachrichtenaustausch. Obwohl das Aktormodell ein generischer Ansatz für Concurrency ist, der fast mit jeder Programmiersprache verwendet werden kann, wird es sehr oft mit der Programmiersprache \textit{Erlang} assoziiert.
+	
+	Im Aktormodell ist ein Aktor die grundlegende Recheneinheit. Ein Aktor hat eine Reihe von Operationen, die er ausführen kann:
+	
+	\begin{enumerate}
+		\item einen anderen Aktor erstellen
+		
+		\item eine Nachricht schicken (die einzige Möglichkeit zum Kommunizieren im Aktormodell)
+		
+		\item den inneren Zustand ändern (nur nachdem eine Nachricht empfangen wurde)
+	\end{enumerate}
+
+	Die wichtigsten Bausteine eines Aktors sind folgende Bestandteile:
+	
+	\begin{description} 
+		\item[Mailbox.] Eine der wichtigsten Eigenschaften des Aktormodells ist es, dass die Nachrichten asynchron ausgetauscht werden. Anstatt direkt an einen Aktor zugestellt zu werden, werden die Nachrichten in einer Mailbox gespeichert. Das bedeutet, dass die Aktoren von ihren Mailboxes entkoppelt sind und dass sie neue Nachrichten im eigenen Tempo bearbeiten. Dadurch werden sie nicht geblockt während des Nachrichtenaustauschs. Aktoren laufen zwar parallel zueinander, sie verarbeiten Nachrichten aber sequentiell in der \footnote{First In First Out} FIFO-Reihenfolge und gehen nur dann zur nächsten Nachricht über, wenn die Verarbeitung der aktuellen Nachricht abgeschlossen ist.
+		
+		\item[Adresse.] Ein Aktor darf nur mit den Aktoren kommunizieren, deren Adressen er hat. Ein Akteur kann Adressen anderer Aktoren auf zwei verschiedene Arten erhalten: Adressen von Aktoren, die ein Aktor selber erstellt hat, oder Adressen von Aktoren, die Nachrichten an den Aktor geschickt haben. Ein Aktor kann sich mit mehreren Adressen identifizieren.
+	\end{description}
+	
+	Aktor-Programme neigen dazu, defensive Programmierung zu vermeiden und die Philosophie \textit{"let it crash"} einzuhalten, indem ein Supervisor eines Aktors stetig seine Exceptions (Ausnahmen) bearbeitet. Defensive Programmierung ist ein Ansatz, die sogenannte Fehlertoleranz zu erreichen. Hierbei wird versucht, mögliche Fehler zu antizipieren. Das hat mehrere Vorteile:
+	
+	\begin{enumerate}
+		\item Der Code ist mit einer klaren Trennung zwischen dem \textit{"happy path"} \footnote{Unter "happy path" versteht man im Kontext des Aktormodells die Geschäftslogik eines Programms oder sein Algorithmus} und dem fehlertoleranten Code (Ausnahmebehandlungen) einfacher zu verstehen. Fehlertoleranter Code beschreibt den Vorgang, wenn ein untergeordneter Aktor abstürzt. Das umfasst die Delegierung oder den Neustart eines Aktors.
+		
+		\item Aktoren sind voneinander getrennt und teilen keinen internen Zustand. Dadurch wird die Gefahr reduziert, dass Fehler in einem Aktor einen anderen Aktor beeinträchtigen. Insbesondere der \textit{Supervisor} eines fehlerhaften Aktors kann nicht abstürzen. Die Funktion des Supervisors kann man mit der Funktion eines Managers vergleichen: er aggregiert mehrere untergeordnete Aktoren, sorgt dafür, dass sie ohne Absturz laufen, löst unberecherechenbare Probleme und - sofern notwendig -  delegiert das Problem an einen übergeordneten Supervisor.
+	\end{enumerate}
+
+	Einer der Hauptvorteile im Vergleich zu anderen Concurrency Modellen ist, dass das Aktormodell die Verteilung unterstützt. Das Senden einer Nachricht an einen Aktor auf einem anderen Rechner ist genauso einfach, wie eine Nachricht an einen lokalen Aktor zu schicken. Dabei ist zu beachten, dass die lokalen Aktoren voneinander isoliert sind und sie keinen Arbeitsspeicher miteinander teilen.
+	
+	Das Aktormodell ist eines der am verbreitesten Programmierungsmodelle. Es bietet nicht nur Unterstützung für Concurrency, sondern auch Verteilung, Fehlererkennung und Fehlertoleranz. Als solches ist es sehr gut für die Art von Programmierproblemen geeignet, mit denen wir in der heutigen zunehmend verteilten Welt konfrontiert sind.
+	
+	\item[Funktionale Programmierung.] Die Concurrent Programmierung in imperativen Sprachen - wie beispielsweise Java - ist aufgrund eines gemeinsamen veränderlichen Zustands schwierig. Funktionale Programmierung macht Concurrency einfacher und sicherer, indem gemeinsam genutzte veränderbare Zustände eliminiert werden. Auf unveränderliche Daten kann zugegriffen werden, ohne mehrere Threads zu stoppen. Das macht die Funktionale Programmierung so geeignet, wenn es um Concurrency und Parallelität geht. Funktionale Programme haben \textit{keinen veränderlichen Zustand}, was durch folgende Konzepte erreicht wird:
+	
+	\begin{description} 
+		\item[Pure functions (Reine Funktion).] Reine Funktion ist eine Funktion mit folgenden Eigenschaften: ihr Rückgabewert ist für dieselben Argumente immer gleich und ihre Auswertung hat keine Nebenwirkungen (Änderung einer globalen Variable). Somit ist eine reine Funktion ein rechnerisches Analogon einer mathematischen Funktion.
+		
+		\item[Referential transparency (Referentielle Transparenz).] Ein Ausdruck wird als referentiell transparent bezeichnet, wenn er durch seinen entsprechenden Wert ersetzt werden kann, ohne das Verhalten des Programms zu ändern. Das bedeutet, dass eine Funktion keine Variablen aus einer globalen Umgebung verwenden darf. Ein Ausdruck, der nicht referentiell transparent ist, wird als referentiell \textit{"opaque"} (nicht transparent) bezeichnet. Der Hauptnachteil von Sprachen, die referenzielle Transparenz erzwingen, besteht darin, dass sie die Operationen, die auf natürliche Weise zu einem imperativen Programmierstil gehören, umständlicher und weniger verständlich machen.
+	\end{description}
+	
+	Reine Funktionen und Referentielle Transparenz ermöglichen Parallelisierung von Berechnungen oder den Betrieb in einer Concurrent Umgebung mit sehr wenig Aufwand. Da der Code im funktionalen Stil den veränderbaren Zustand eliminiert, sind die meisten Concurrency Fehler, die in traditionellen Thread und Mutex-basierten Programmen auftauchen, unmöglich. Es wird erwartet, dass der funktionale Code weniger effizient ist als das imperative Äquivalent. Obwohl es Auswirkungen auf die Leistung für einige Arten von Aufgaben hat, ist die Leistungsminderung üblicherweise relativ klein. Eine solch geringe Leistungsminderung wird meist zugunsten der verbesserten Skalierbarkeit und Robustheit in Kauf genommen.
+	
+	\item[Communicating Sequential Processes (CSP).] CSP ist eine Prozessalgebra zur Beschreibung von Interaktionen zwischen kommunizierenden Prozessen. Die Idee wurde 1978 als imperative Sprache von Tony Hoare erstmals vorgestellt, dann von ihm zu einer formalen Algebra ausgebaut und 1985 mit der Veröffentlichung des Buchs mit dem gleichnamigen Titel “Communicating Sequential Processes” berühmt. Die Programmiersprachen Go beinhaltet praktische Implementierungen der CSP und stellt - im Gegensatz zu vielen neuen prozeduralen und objektorientierten Programmiersprachen - kein Threading Modell für Concurrency zur Verfügung. Concurrency in Go ist ressourcenschonend und ist wesentlich einfacher zu verwalten als übliche Thread Pools. Als Basis dafür fungieren zwei Konzepte:
+\end{description}
 
 
 
