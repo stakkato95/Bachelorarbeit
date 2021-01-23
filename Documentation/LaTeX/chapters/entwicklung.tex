@@ -9,7 +9,7 @@ Die Implementierung jedes Systems erfordert Zeit, die auch exponentiell mit der 
 
 \subsection{Scala als Programmiersprache}
 
-Als Programmiersprache für die Implementierung des Prototypen wurde Scala verwendet. Scala ist eine \textit{Universalsprache}, die sowohl objektorientierte Programmierung als auch funktionale Programmierung unterstützt. Die Sprache ist statisch typisiert. Der Scala-Quellcode wird in Java Bytecode kompiliert, sodass der resultierende ausführbare Code auf der Java Virtual Machine (JVM) ausgeführt werden kann. Scala bietet Interoperabilität mit Java. Im Gegensatz zu Java verfügt Scala über viele Eigenschaften funktionaler Programmiersprachen, wie beispielsweise Scheme, Standard ML und Haskell, einschließlich Currying, Immutability (Unveränderlichkeit), die Lazy Evaluation (bequeme oder auch faule Auswertung) und Pattern Matching. Es verfügt ebenfalls über ein fortschrittliches Typsystem, das algebraische Datentypen, Kovarianz und Kontravarianz sowie anonyme Typen unterstützt. Andere Funktionen von Scala, die in Java nicht vorhanden sind, sind das Überladen von Operatoren, optionale Parameter und benannte Parameter.
+Als Programmiersprache für die Implementierung des Prototypen wurde Scala verwendet. Scala ist eine \textit{Universalsprache}, die sowohl objektorientierte Programmierung als auch funktionale Programmierung unterstützt \cite{Odersky04anoverview}. Die Sprache ist statisch typisiert. Der Scala-Quellcode wird in Java Bytecode kompiliert, sodass der resultierende ausführbare Code auf der Java Virtual Machine (JVM) ausgeführt werden kann. Scala bietet Interoperabilität mit Java. Im Gegensatz zu Java verfügt Scala über viele Eigenschaften funktionaler Programmiersprachen, wie beispielsweise Scheme, Standard ML und Haskell, einschließlich Currying, Immutability (Unveränderlichkeit), die Lazy Evaluation (bequeme oder auch faule Auswertung) und Pattern Matching. Es verfügt ebenfalls über ein fortschrittliches Typsystem, das algebraische Datentypen, Kovarianz und Kontravarianz sowie anonyme Typen unterstützt. Andere Funktionen von Scala, die in Java nicht vorhanden sind, sind das Überladen von Operatoren, optionale Parameter und benannte Parameter.
 
 Laut \textit{"Github Language Stats"} (Stand 23.12.2020) erreichte Scala bei der Anzahl an Pull-Requests den elften Platz und überholte somit Programmiersprachen wie Rust, Kotlin, Swift und Haskell.
 
@@ -17,11 +17,11 @@ Für die Implementierung eines Produktivsystems, welches auf einer Drohne läuft
 
 \subsection{Akka für das Implementieren verteilter Systeme}
 
-Den größten Vorteil von Scala bietet das Aktorsystem, genauer gesagt das Aktorsystem der Akka-Bibliothek. Die Verwendung von Akka macht die Erstellung der Infrastruktur für ein Aktorsystem und das Schreiben des Low-Level-Codes, der zur Steuerung des grundlegenden Verhaltens erforderlich ist, überflüssig.
+Den größten Vorteil von Scala bietet das Aktorsystem, genauer gesagt das Aktorsystem der Akka-Bibliothek. Die Verwendung von Akka macht die Erstellung der Infrastruktur für ein Aktorsystem und das Schreiben des Low-Level-Codes, der zur Steuerung des grundlegenden Verhaltens erforderlich ist, überflüssig \cite{Odersky04anoverview}.
 
-Ein Aktor in Akka hat immer einen Elternknoten und alle Knoten sind Kinder des Guardian-Knotens, der beim Start eines Aktorsystems erstellt wird. Eine Instanz des ActorSystems dient zur Kommunikation mit dem Aktorsystem, zur Erstellung neuer Aktoren, zur Adressierung und zur Verwaltung des Kontexts. Eine reibungslose Kommunikation zwischen den Aktoren ist nur innerhalb des Systems möglich. Wenn eine andere Softwarekomponente einen Aktor innerhalb des Aktorsystems aufrufen möchte, muss diese Anfrage mittels Adapter übersetzt werden. Dasselbe gilt für Antworten des Aktorsystems. Die Kommunikation im Aktorsystem ist immer asynchron.
+Ein Aktor in Akka hat immer einen Elternknoten und alle Knoten sind Kinder des Guardian-Knotens, der beim Start eines Aktorsystems erstellt wird \cite{akka}. Eine Instanz des ActorSystems dient zur Kommunikation mit dem Aktorsystem, zur Erstellung neuer Aktoren, zur Adressierung und zur Verwaltung des Kontexts. Eine reibungslose Kommunikation zwischen den Aktoren ist nur innerhalb des Systems möglich. Wenn eine andere Softwarekomponente einen Aktor innerhalb des Aktorsystems aufrufen möchte, muss diese Anfrage mittels Adapter übersetzt werden. Dasselbe gilt für Antworten des Aktorsystems. Die Kommunikation im Aktorsystem ist immer asynchron.
 
-Bevor der erste Aktor gestartet wird, hat Akka bereits 2 Aktoren erstellt. Die Namen dieser eingebauten Aktoren enthalten \textit{"guardian"} (Wächter). Die Guardian-Aktoren umfassen:
+Bevor der erste Aktor gestartet wird, hat Akka bereits 2 Aktoren erstellt. Die Namen dieser eingebauten Aktoren enthalten \textit{"guardian"} (Wächter) \cite{akka}. Die Guardian-Aktoren umfassen:
 
 \begin{enumerate}
 	\item "/" - der sogenannte Root-Guardian. Das ist das übergeordnete Element aller Aktoren im System und das letzte, das angehalten wird, wenn das System stoppt.
@@ -43,16 +43,16 @@ Struktur der Guardian Aktoren wird in der Abbildung \ref{fig:akkaActors} dargest
 Anwendung des Akka Aktorsystems und seiner Module bringt folgende Vorteile für verteilte Systeme:
 
 \begin{description} 
-	\item[Protokollunabhängigkeit.] Standardmäßig bietet Akka eine Integration mit HTTP, aber mittels Konnektoren (Adapters anders gesagt) kann man auch problemlos über MQTT, AMQP, JMS (Java Message Service) und gRPC kommunizieren.
+	\item[Protokollunabhängigkeit.] Standardmäßig bietet Akka eine Integration mit HTTP, aber mittels Konnektoren (Adapters anders gesagt) kann man auch problemlos über MQTT, AMQP, JMS (Java Message Service) und gRPC kommunizieren \cite{akka}.
 	
-	\item[Verteilte Aktoren.] Akka Remoting ermöglicht Aktoren, die auf verschiedenen Rechnern laufen, Nachrichten nahtlos auszutauschen. Dank des Aktormodells sieht ein ferner und lokaler Nachrichtenversand gleich aus. Es bietet die Basis, auf der das Cluster-Subsystem aufgebaut ist.
+	\item[Verteilte Aktoren.] Akka Remoting ermöglicht Aktoren, die auf verschiedenen Rechnern laufen, Nachrichten nahtlos auszutauschen. Dank des Aktormodells sieht ein ferner und lokaler Nachrichtenversand gleich aus. Es bietet die Basis, auf der das Cluster-Subsystem aufgebaut ist \cite{akka}.
 	
-	\item[Unterstützung von Clusters.] Wenn es in einem verteilten System eine Reihe von Aktoren gibt, die zusammenarbeiten, um eine Aufgabe zu lösen, muss das System auf eine bestimmte Weise aufgebaut und gesteuert werden. Während Akka-Remoting das Problem der Adressierung und Kommunikation zwischen Komponenten eines verteilten Systems löst, bietet Clustering die Möglichkeit, diese Knoten in der Form eines Metasystems mit einem Mitgliedschaftsprotokoll zu organisieren. Das ist ein Teil der Kontrollebene eines Clusters.
+	\item[Unterstützung von Clusters.] Wenn es in einem verteilten System eine Reihe von Aktoren gibt, die zusammenarbeiten, um eine Aufgabe zu lösen, muss das System auf eine bestimmte Weise aufgebaut und gesteuert werden. Während Akka-Remoting das Problem der Adressierung und Kommunikation zwischen Komponenten eines verteilten Systems löst, bietet Clustering die Möglichkeit, diese Knoten in der Form eines Metasystems mit einem Mitgliedschaftsprotokoll zu organisieren \cite{akka}. Das ist ein Teil der Kontrollebene eines Clusters.
 	
 	\item[Sharding (horizontale Fragmentierung).] Sharding ist ein Vorgehen, das verwendet wird, um eine große Anzahl von Aktoren auf Knoten eines Clusters aufzuteilen und sie auch auf andere Knoten zu verschieben, wenn andere Knoten abstürzen oder unerreichbar werden.
 \end{description}
 
-Akka verfügt über mehrere Kommunikationspatterns. Einige von ihnen sind für Aktorsysteme spezifisch und dienen dazu, ein erklärbares und skalierbares System zu entwickeln. Diese spezifische Patterns sind z.B:
+Akka verfügt über mehrere Kommunikationspatterns \cite{akka}. Einige von ihnen sind für Aktorsysteme spezifisch und dienen dazu, ein erklärbares und skalierbares System zu entwickeln. Diese spezifische Patterns sind z.B:
 
 \begin{enumerate}
 	\item Zusendung des Ergebnisses eines Futures \footnote{Ein Future bezeichnet einen Platzhalter (Proxy) für ein Ergebnis, das noch nicht bekannt ist, meist weil seine Berechnung noch nicht abgeschlossen ist.} an sich selbst
@@ -63,11 +63,11 @@ Akka verfügt über mehrere Kommunikationspatterns. Einige von ihnen sind für A
 Patterns, die bei der Implementierung des Raft-Algorithmus eingesetzt wurden, sind:
 
 \begin{description} 
-	\item[Fire and Forget (Tell-Ansatz).] Fire-And-Forget ist der fundamentale Weg für die Kommunikation zwischen Aktoren. "Tell" ist asynchron, was bedeutet, dass die Methode in einem anderen Thread gestartet wird. Nachdem der Befehl ausgeführt wurde, gibt es keine Garantie, dass die Nachricht noch vom Empfänger verarbeitet wurde. Das bedeutet auch, dass es keine Möglichkeit gibt herauszufinden, ob die Nachricht empfangen wurde, die Verarbeitung erfolgreich war oder fehlgeschlagen ist. Fire-And-Forget ist so üblich bei Akka, dass es einen speziellen symbolischen Namen hat: “!” (Ausrufezeichen). Der Versand einer Nachricht hätte dann so ausgesehen “actor ! message”.
+	\item[Fire and Forget (Tell-Ansatz).] Fire-And-Forget ist der fundamentale Weg für die Kommunikation zwischen Aktoren \cite{akka}. "Tell" ist asynchron, was bedeutet, dass die Methode in einem anderen Thread gestartet wird. Nachdem der Befehl ausgeführt wurde, gibt es keine Garantie, dass die Nachricht noch vom Empfänger verarbeitet wurde. Das bedeutet auch, dass es keine Möglichkeit gibt herauszufinden, ob die Nachricht empfangen wurde, die Verarbeitung erfolgreich war oder fehlgeschlagen ist. Fire-And-Forget ist so üblich bei Akka, dass es einen speziellen symbolischen Namen hat: \textit{"!"} (Ausrufezeichen). Der Versand einer Nachricht hätte dann so ausgesehen “actor ! message”.
 	
 	\item[Request-Response mit einer oder mehreren Antworten.] Mehrere Interaktionen erfordern eine oder mehrere Antworten. Um die Antwort zu erhalten muss der Absender seine Adresse in der Nachricht mitschicken.
 	
-	\item[Request-Response mit einer einzelnen Antwort (Ask-Ansatz).] Wenn für eine Anfrage genau eine Antwort erwartet wird, verwendet man Ask-Anfragen. Eine Ask-Anfrage hat ebenfalls eine spezielle Bezeichnung: “?”. Da alle Kommunikationen im Aktorsystem asynchron sind, darf man einen Aktor mit der Ask-Anfrage nicht blockieren. Die Antwort wird asynchron empfangen und in einen Callback übergeben, der bei der Absendung der Ask-Anfrage erstellt sein soll.
+	\item[Request-Response mit einer einzelnen Antwort (Ask-Ansatz).] Wenn für eine Anfrage genau eine Antwort erwartet wird, verwendet man Ask-Anfragen. Eine Ask-Anfrage hat ebenfalls eine spezielle Bezeichnung: \textit{"?"}. Da alle Kommunikationen im Aktorsystem asynchron sind, darf man einen Aktor mit der Ask-Anfrage nicht blockieren. Die Antwort wird asynchron empfangen und in einen Callback übergeben, der bei der Absendung der Ask-Anfrage erstellt sein soll \cite{akka}.
 	
 	\item[Interaktion mit externen Komponenten.] Da Aktoren standardmäßig nur mit anderen Aktoren innerhalb eines Aktorsystems kommunizieren können, braucht man eine Brücke für die Außenwelt. Eine der möglichen Lösungen ist Future. Dies ist eine Abstraktionsschicht über übliche Callbacks und stellt Ergebnis einer asynchronen Operation dar. Ein Future wird normalerweise von einem Promise erstellt, der ein Proxy zwischen einer Rechenoperation und dem Future (dem asynchronen Ergebnis) darstellt.
 	
@@ -83,13 +83,13 @@ Das Kommunikationsmuster eines Knotens mit anderen Knoten und dessen Verhalten k
 	\label{fig:stateTransition}
 \end{figure}
 
-Dadurch, dass Akka viele wichtige Bausteine für den Aufbau verteilter Systeme auf Mikroebene (automatische Serialisierung und Deserialisierung von Nachrichten, Timers, Austausch von Behaviors) und Makroebene (Protokollunabhängigkeit, Unterstützung verteilter Aktoren und Clusters von Aktoren) bietet, ist es für die Implementierung eines verteilten Systems besonders gut geeignet.
+Dadurch, dass Akka viele wichtige Bausteine für den Aufbau verteilter Systeme auf Mikroebene (automatische Serialisierung und Deserialisierung von Nachrichten, Timers, Austausch von Behaviors) und Makroebene (Protokollunabhängigkeit, Unterstützung verteilter Aktoren und Clusters von Aktoren) bietet, ist es für die Implementierung eines verteilten Systems besonders gut geeignet \cite{akka}.
 
 \subsection{Einschränkungen bei der Implementierung eines verteilten Systems mit Akka}
 
-Wie es schon im zweiten Kapitel festgestellt wurde, folgt das Aktorsystem dem Prinzip \textit{"let it crash"}, bei dem ein Kindknoten seinem Elternknoten über Ausnahmesituationen Bescheid gibt, sodass der letzte Knoten alle dieser Situationen auflöst. Wenn ein Elternknoten eine Ausnahmesituation nicht auflösen kann, delegiert er seinem Elternknoten die Verantwortung für die Situation. Dadurch entsteht ein Baum von Aktoren, in dem ein übergeordneter Knoten einen untergeordnete Knoten beobachtet und verwaltet. Das bedeutet, dass alle fehlerhaften Operationen in Blättern des \textit{Observation-Tree} (Beobachtungsbaum) konzentriert werden. Je näher ein Aktor der Wurzel des Baumes ist, desto weniger Ausnahmesituationen werden für ihn möglich sein. Die Robustheit der Hierarchie wird durch die Abgrenzung von fehlerhaften Operationen in mehreren kleinen Blattaktoren erreicht. Das stimmt mit dem bekannten Zitat des Erfinders des Aktorsystems Tony Hoare überein:
+Wie es schon im zweiten Kapitel festgestellt wurde, folgt das Aktorsystem dem Prinzip \textit{"let it crash"} \cite{Armstrong93concurrentprogramming}, bei dem ein Kindknoten seinem Elternknoten über Ausnahmesituationen Bescheid gibt, sodass der letzte Knoten alle dieser Situationen auflöst. Wenn ein Elternknoten eine Ausnahmesituation nicht auflösen kann, delegiert er seinem Elternknoten die Verantwortung für die Situation. Dadurch entsteht ein Baum von Aktoren, in dem ein übergeordneter Knoten einen untergeordnete Knoten beobachtet und verwaltet. Das bedeutet, dass alle fehlerhaften Operationen in Blättern des \textit{Observation-Tree} (Beobachtungsbaum) konzentriert werden. Je näher ein Aktor der Wurzel des Baumes ist, desto weniger Ausnahmesituationen werden für ihn möglich sein. Die Robustheit der Hierarchie wird durch die Abgrenzung von fehlerhaften Operationen in mehreren kleinen Blattaktoren erreicht. Das stimmt mit dem bekannten Zitat des Erfinders des Aktorsystems Tony Hoare überein:
 
-"There are two ways of constructing a software design: One way is to make it so simple that there are obviously no deficiencies and the other way is to make it so complicated that there are no obvious deficiencies."
+"There are two ways of constructing a software design: One way is to make it so simple that there are obviously no deficiencies and the other way is to make it so complicated that there are no obvious deficiencies" \cite{Graham_communicatingsequential}.
 
 Das Konzept der Verschiebung des kritischen Codes in äußere Knoten des Baumes nennt man \textit{Error-Kernel} (der Kernel der Fehler).
 
@@ -191,7 +191,7 @@ Futures sind Kommunikationsschnittstellen, die Ergebnisse an den ClusterService 
 	\item[Timeouts.] Wenn der Zustand des Clusters abgefragt sein muss, schickt der ClusterService Anfragen an das Aktorsystem, um den aktuellen Stand des Leader, Followers und Kandidaten zu erhalten. Am Start des Clusters kann es vorkommen, dass der Zustand dann abgefragt wird, wenn es im Cluster z.B. noch keinen Leader oder keine Kandidaten gibt. In dieser Situation wäre die Zeit der Zustellung eines Ergebnisses undefiniert und unbegrenzt.
 \end{description}
 
-Um diese Herausforderungen zu meistern, wurden \textit{ReentrantPromise} und \textit{ReentrantFuture} erstellt. Die beiden Namen wurden analog zum \textit{ReentrantLock} in Java ausgewählt, um die Wiederverwendbarkeit der Instanzen dieser Klasse hervorzuheben.
+Um diese Herausforderungen zu meistern, wurden \textit{ReentrantPromise} und \textit{ReentrantFuture} erstellt. Die beiden Namen wurden analog zum \textit{ReentrantLock} \cite{Long10javaconcurrency} in Java ausgewählt, um die Wiederverwendbarkeit der Instanzen dieser Klasse hervorzuheben.
 
 ReentrantPromise setzt die Ergebnisse der asynchronen Operationen und ReentrantFuture erlaubt es, diese Ergebnisse mehrmals abzufragen. Das Ergebnis eines standardmäßigen Futures darf nur einmal aufgerufen werden. Wenn das Ergebnis eines Futures zum zweiten Mal abgefragt wird, wird eine Exception ausgelöst. Dies ist ein Schutzmechanismus, um eine unendliche Blockierung des aufrufenden Threads zu vermeiden, wenn das Ergebnis mehr als einmal abgefragt wird.
 
