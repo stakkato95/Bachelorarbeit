@@ -245,6 +245,53 @@ Der Aktor, an den das Ergebnis zugestellt wird, ist immer der Client-Aktor. Dies
 
 \section{Kommunikationsprotokoll zwischen den Teilkomponenten und den Knoten in Raft}
 
+Der erste Schritt bei der Implementierung des Raft-Algorithmus hat eine sorgfältige Analyse des Originalartikels erfordert. Obwohl auf Seite 4 des Raft-Artikels eine Zusammenfassung aller Rollen, Nachrichten und Feinheiten der Verhalten dargestellt wird, sind zusätzliche Informationen und Feinheiten im gesamten Artikel zu finden. Im nächsten Schritt waren alle Feinheiten nach den Rollen des Algorithmus gruppiert und in drei Tabellen entsprechend zusammengefasst.
+
+\subsection{Definition des Followers in Raft}
+
+Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen des Leaders und der Kandidaten. Jeder Knoten im Cluster startet im Followerzustand und setzt sofort einen Heartbeat-Timer. Wenn der Timer abläuft und sich noch kein einziger Leader gemeldet hat, wird er zum Kandidaten. Der Übergang in eine neue Rolle wird durch die Verwendung von Akka-Behaviors erreicht. Die Liste von Nachrichten, die ein Knoten in dieser Rolle empfangen kann, ist in der Tabelle \ref{tab:followerReceive} dargestellt.
+
+\begin{table} \centering
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+		\hline
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		
+		\hline
+		AppendEntries Heartbeat des Leaders & 
+		- Leader-Information (Term und Akka-Referenz auf den Leader) & 
+		- Heartbeat Timer zurücksetzen
+		
+		- wenn der Term des Leaders größer ist als der zuletzt gesehene Term, werden Information über den Leader geupdatet & keine\\
+		
+		\hline
+		AppendEntries mit einem neuen Log Eintrag & - Leader-Information
+		
+		- Letzter Logeintrag des Leaders
+		
+		- das zu replezierende Element
+		
+		- Leader-Commit
+		
+		- UUID des Logeintrags (in einer Fußnote erklären) 
+		& - wenn der Term des Leader kleiner als der Term des zuletzt gesehenen Leaders ist, wird die Abarbeitung dieser Nachricht abgebrochen. Andernfalls werden weitere Schritte ausgeführt
+		
+		- Leader Information updaten
+		
+		- den letzten Logeintrag des Leaders mit dem eigenen letzten Logeintrag vergleichen. Wenn sie unterschiedlich sind, dann wird der Leader um die Zusendung des vorletzten Eintrags gebeten und weitere Schritte werden nicht ausgeführt. Wenn sie gleich sind, wird der Eintrag an den eigenen 
+		 & - ein nicht erfolgreicher AppendEntriesResponse, um dem Leader darauf hinzuweisen, dass er diesem Knoten bisherige Logeinträge senden soll
+		 
+		 - ein erfolgreicher AppendEntriesResponse mit dem UUID des neuen Elements, wenn ein neuer Logeintrag an den lokalen Log angehängt wurde. Ein UUID hilft dem Leader zu identifizieren, welche Einträge und wie vielen Knoten schon erfolgreich repliziert wurden\\
+		
+		\hline
+	\end{tabular}
+	\caption{Nachrichten, die ein Follower im Raft-Algorithmus empfangen kann.}
+	\label{tab:followerReceive}
+\end{table}
+
+\subsection{Definition des Kandidaten in Raft}
+
+
+
 
 
 
