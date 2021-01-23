@@ -1,3 +1,10 @@
 \chapter{Fazit}
 \label{cha:Fazit}
 
+Ziel der vorliegenden Bachelorarbeit war es, durch die Analyse von Concurrency Modellen und Algorithmen für verteilte Systeme eine optimale Kombination von theoretischen und praktischen Ansätzen zur Entwicklung der Software für unbemannter Luftfahrzeugen genauer zu beleuchten. Für die Beantwortung dieser Frage wurde eine Studie zu den am häufigsten verwendeten Algorithmen für verteilte Systeme, Concurrency Modelle sowie Concurrency Frameworks durchgeführt.
+
+Die Ergebnisse der Untersuchung der Algorithmen für verteilte Systeme haben ergeben, dass Raft-Algorithmus mit seiner Erklärbarkeit und Protokoll-Effizienz die beste Option für die Entwicklung des Konsensmoduls darstellt. Der Vergleich mit den alternativen Algorithmen hat deutlich gezeigt, dass Raft mit seiner pragmatischen Darstellung und seinem frischen Blick auf Replikationsverfahren den Paxos-Algorithmus hinter sich lässt. Diese Tatsache wird auch dadurch bestätigt, dass die Popularität des Algorithmus in letzten Jahren sehr schnell gestiegen ist.
+
+Ein anderer wichtigster Aspekt, der bei der Entwicklung verteilter Systeme berücksichtigt sein muss, ist Concurrency. Verteilte Systeme stellen eigene Anforderungen an Concurrency Modell. Unter anderem sind Fehlertoleranz, bidirektionale Kommunikation und reibungsloser Aufruf von Remote-Services dafür wichtig. Durch den Vergleich von vier populärsten Concurrency Modelle (Aktormodell, CSP, funktionale Programmierung, Threads und Mutex) wurde der Schluss gezogen, dass Aktormodell für die Erfüllung der erwähnten Anforderungen an die Software für Drohnen am besten geeignet ist. 
+
+Praktischer Teil der Arbeit hat die Implementierung des Raft-Algorithmus mit der Programmiersprache Scala umgefasst. Die Implementierung hat gezeigt, dass solche funktionale Programmiersprachen wie Scala mit ihren fortgeschrittenen Pattern-Matching Eigenschaften den Zeitaufwand beim Testing und auch bei der Entwicklung sparen. Aus diesen Befunden kann darauf geschlossen werden, dass der Raft-Algorithmus in der Kombination mit dem Aktormodell die Rahmenbedingungen der verteilten Systeme in unbemannten Luftfahrzeugen erfüllt. 

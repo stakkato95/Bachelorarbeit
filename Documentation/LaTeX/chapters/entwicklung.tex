@@ -264,7 +264,7 @@ Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen d
 		- wenn der Term des Leaders größer ist als der zuletzt gesehene Term, werden Information über den Leader geupdatet & keine\\
 		
 		\hline
-		AppendEntries mit einem neuen Log Eintrag & - Leader-Information
+		AppendEntries mit einem neuen Logeintrag & - Leader-Information
 		
 		- Letzter Logeintrag des Leaders
 		
@@ -417,45 +417,28 @@ Der Leader ist eine Schnittstelle zwischen Clients und dem Rest des Clusters. Di
 	\label{tab:leaderSend}
 \end{table}
 
-Bei der AppendEntries-Response Nachricht wurde \textit{NextIndex} erwähnt. NextIndex ist ein Map, das Followerreferenzen auf den nächsten Index im Log abbildet. Der jeweilige Follower erwartet diesen Index. Der Leader hält das Map im aktuellen Zustand, um zu wissen, welcher Logeintrag für welchen Follower zu einem Zeitpunkt zugeschickt sein muss, und um sicher zu stellen, dass jeder Log Eintrag genau einmal zugeschickt wird. Es entspricht der \textit{"exactly once"} Nachrichtenzustellungssemantik in verteilten Systemen. Das heißt, die Nachricht darf nicht verloren gehen und darf auch nicht zweimal zugestellt werden.
+Bei der AppendEntries-Response Nachricht wurde \textit{NextIndex} erwähnt. NextIndex ist ein Map, das Followerreferenzen auf den nächsten Index im Log abbildet. Der jeweilige Follower erwartet diesen Index. Der Leader hält das Map im aktuellen Zustand, um zu wissen, welcher Logeintrag für welchen Follower zu einem Zeitpunkt zugeschickt sein muss, und um sicher zu stellen, dass jeder Logeintrag genau einmal zugeschickt wird. Es entspricht der \textit{"exactly once"} Nachrichtenzustellungssemantik in verteilten Systemen. Das heißt, die Nachricht darf nicht verloren gehen und darf auch nicht zweimal zugestellt werden.
 
+\section{Besonderheiten bei der Implementierung des Raft-Algorithmus}
 
-
-
-
-
-
-
-\textit{}
-
-\begin{table} \centering
-	\begin{tabular}{|P{3cm}|P{3cm}|P{3cm}|P{3cm}|P{3cm}|} 
-		\hline
-		&  \textbf{Aktormodell} & \textbf{CSP} & \textbf{Funktionale Programmierung} & \textbf{Threads und Mutex}\\
-		
-		\hline
-		Primär Fokus & Fehlertoleranz und verteiltes Rechnen & Flexibilität und Ausdruckskraft & Nebeneffektefreiheit durch Immutability & Effizienz und breite Anwendbarkeit\\
-		
-		\hline
-	\end{tabular}
-	\caption{Vergleich von Concurrency Modellen.}
-	\label{tab:123}
-\end{table}
+Bei der Implementierung des Raft-Algorithmus sind folgende Herausforderungen aufgetreten:
 
 \begin{description} 
-	\item[.] 
+	\item[Tests und Absicherung.] Die Entwicklung von Komponenten eines verteilten Systems, wenn andere Komponenten noch nicht fertig oder noch in der Entwicklung sind, ist extrem schwierig. Es gibt zu viele Fakten und Feinheiten, die alle im Voraus berücksichtigt werden müssen. Weiters bereitet die asynchrone Natur der Kommunikation in verteilten Systemen (was Akka auch unterstützt) große Schwierigkeiten während des Debuggings. Deswegen wurde die Entscheidung getroffen, alle Rollen des Algorithmus und alle überschaubaren und auf den ersten Blick nicht überschaubaren Szenarien erst in Tests abzusichern und dann die getesteten Komponenten zusammenzuführen. Das Testframework für Akka-Aktoren ermöglicht eine synchrone Ausführung von Tests, während die getesteten Aktoren asynchron laufen. Das hätte viele Stunden von Debugging gekostet, wenn das ganze System ohne Tests implementiert wäre. Tests liegen im ScalaRaft Projekt in FollowerSpec, CandidateSpec bzw. LeaderSpec-Dateien.
 	
-	\item[.] 
+	\item[Überlappungen zwischen Rollen in Raft.] Auf den ersten Blick sind alle Rollen im Raft-Algorithmus einzigartig und scheinen keine gemeinsamen Bereiche zu teilen. Bei der Implementierung ist jedoch aufgetreten, dass solche Teile, wie z.B. Discovery von Knoten, die Verwaltung des aktuellen Wertes des Zustandsautomaten, die Größe des Quorums und die Abfrage der Basisinformationen zwischen allen Rollen geteilt werden können. So ist die \textit{BaseRaftBehavior-Klasse} entstanden. Follower, Kandidat und Leader Rollen beruhen auf dieser Klasse.
 	
-	\item[.] 
+	\item[Einschränkungen der Simulation.] Da alle Knoten des Raft-Algorithmus mit dem aktuellen Stand des Prototypen auf demselben Rechner laufen, ist es unmöglich, den Übergang eines Knotens von dem Followerzustand in den Kandidaten- und dann in Leaderzustand zu beobachten. Alle Knoten laufen lokal und den Übergang von einem Zustand in den anderen Zustand rechnet man in Millisekunden, weil alle lokal geschickte Nachrichten durch geteilte Teile des Arbeitsspeichers zugestellt werden.
+	
+	\item[Pending Items.] Eine offene Frage während der Implementierung gab es für die Weise, auf die noch nicht replizierte Logeinträge auf dem Leader Knoten gespeichert werden. Im Raft Artikel steht dafür nur:
+	\\
+	\\
+	"A log entry is committed once the leader that created the entry has replicated it on a majority of the servers"
+	\\
+	\\
+	ohne irgendwelcher Hinweise auf Implementierungsdetails. Deswegen war folgende Lösung umgesetzt. Leader führt ein Map mit allen Logeinträgen, die noch nicht repliziert wurden. Schlüssel bei diesem Map ist UUID und Wert ist PendingItem Eintrag. PendingItem enthielt Logeintrag selber, Replikationszähler für die Anzahl von Knoten, auf denen der Eintrag schon repliziert wurde, und Akka-Referenz auf den Client, der auf Ergebnis wartet. Wenn ein Follower den Eintrag erfolgreich repliziert, schickt er AppendEntriesResponse mit UUID des Pending-Eintrags. Entsprechender Pending Eintrag wird nach dem UUID aus dem Map extrahiert und Replikationszähler um 1 erhöht. Wenn Replikationszähler gleich dem Quorumgröße ist, dann wird ClinetResponse Nachricht an den Client geschickt und der Eintrag aus dem PendingItem Map gelöscht.
 \end{description}
 
-\begin{enumerate}
-	\item 
-	
-	\item 
-	
-	\item 
-	
-	\item 
-\end{enumerate}
+\section{Fazit}
+
+Akka hat sich bewährt als eine saubere Lösung für Entwicklung verteilter Systeme. Mit den Werkzeugen, die Akka zur Verfügung stellt, kann man sich bei der Umsetzung des Systems nur auf das wesentliche konzentrieren, was Zeit beim Planen, Testen und Debugging erheblich spart. Andere Features von Akka, wie z.B. Akka Remoting, Akka Cluster oder Akka Sharding bringen noch mehr Möglichkeiten und Wege, Implementierung und Funktionsweise verteilter Systeme zu optimieren. Scala mit dem Pattern Matching, dem Optional Datentyp und anderen Besonderheiten stellt eine gute Option für Aufbau von Prototypen dar. Überlegungen über die Struktur des voraussichtlichen Produktivsystems bringt Basis für die nächsten Schritte bei der Entwicklung weiterer Prototypen.
