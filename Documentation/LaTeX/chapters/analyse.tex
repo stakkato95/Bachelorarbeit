@@ -200,3 +200,63 @@ Neben den Eigenschaften müssen auch Bausteine für Modellierung verteilter Syst
 Diese theoretischen Bausteine sind Grundlagen für zwei Algorithmen, die für die Auflösung des Konsenses in verteilten Systemen besonders wichtig sind: \textit{Paxos} und \textit{Raft}.
 
 \subsection{Paxos und Raft für Konsens in verteilten Systemen}
+
+Das Wichtigste bei Konsens-Algorithmen ist es zu verstehen, dass:
+
+\begin{enumerate}
+	\item Konsens die Eignung auf einen einzelnen Wert bedeutet.
+	
+	\item der Konsens erreicht ist, wenn sich die Mehrheit auf einen Wert einigt.
+	
+	\item jeder Knoten im System den erreichten Konsens irgendwann erfahren muss.
+	
+	\item die Kommunikationskanäle fehlerhaft sind, was die Erreichung des Konsenses verhindert.
+\end{enumerate}
+
+Generell gibt es zwei Klassen von Systemen, die auf Konsens-Algorithmen beruhen:
+
+\begin{description} 
+	\item[Leader-Replica Schema.] In diesem System gibt es immer einen \textit{Leader}, der Anfragen beantwortet und Schreiboperationen steuert und Replicas (Followers), die Daten eines Leaders replizieren. In diesem Fall müssen alle Knoten nur dann einen Konsens erreichen, wenn der alte Leader abstürzt oder aus einem anderen Grund unerreichbar wird. In der Zwischenzeit, während noch kein neuer Leader ausgewählt wird, ist das System für neue Anfragen nicht erreichbar.
+	
+	\item[Peer-to-Peer Schema.] In diesem System verhalten sich alle Knoten gleich und sind gleichrangig. Wenn mehrere Clients einige Werte schreiben wollen, müssen sich die Knoten untereinander einigen, in welcher Reihenfolge neue Werte im System gespeichert werden. Das ist wichtig, da alle Knoten dieselbe Reihenfolge gespeicherter Werte einhalten müssen. In diesem Fall muss der Konsens kontinuierlich aufrechterhalten werden.
+\end{description}
+
+Paxos und Raft gehören zur \textit{"Leader-Replica Schema"} Klasse von Konsens-Algorithmen. Konsens-Algorithmen haben typischerweise folgende Eigenschaften:
+
+\begin{enumerate}
+	\item Sie sorgen für Sicherheit unter allen \textit{nicht byzantinischen Bedingungen} \footnote{Das ist die Situationen, wenn ein Knoten sich abhängig vom Beobachter entweder als ein korrekter oder als ein fehlerhafter Prozess verhält.}, einschließlich Netzwerk-Verzögerungen, Partitionen des Netzwerks, Paketverlust, Deduplizierung und Neuordnung der Pakete. Sicherheit in diesem Kontext bedeutet, dass das System immer einen korrekten Wert zurückgibt. Ein korrekter Wert in verteilten Systemen ist der Wert, der auf einem \textit{Quorum} aller Knoten repliziert wurde. Ein Wert, der auf einem einzigen Knoten gespeichert wurde und dann an einen Client zurückgeschickt wird, ist nicht korrekt.
+	
+	\item Sie sind funktionsfähig, solange die meisten Knoten betriebsbereit sind und miteinander und mit Clients kommunizieren können. Somit kann ein typischer Cluster von fünf Knoten den Ausfall von zwei beliebigen Knoten tolerieren. Es wird angenommen, dass Knoten durch einen Absturz unerreichbar werden. Sie können sich später von einem zwischengespeicherten Zustand wiederherstellen und wieder dem Cluster beitreten.
+	
+	\item Ein Konsens-Algorithmus hängt nicht vom \textit{Timing} ab, um die Konsistenz sicherzustellen: fehlerhafte Uhren und extreme Nachrichtenverzögerungen können schlimmstenfalls zu Verfügbarkeitsproblemen führen. Eine Minderheit langsamer Knoten muss sich nicht auf die Gesamtsystemleistung auswirken.
+\end{enumerate}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{description} 
+	\item[.] 
+	
+	\item[.] 
+	
+	\item[.] 
+\end{description}
+
+\begin{enumerate}
+	\item 
+	
+	\item 
+	
+	\item 
+	
+	\item 
+\end{enumerate}
