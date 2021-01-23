@@ -544,43 +544,99 @@ Die ursprüngliche Definition des Aktmodells befasste sich mit einem abstrakten 
 \begin{description} 
 	\item[Skalierbarkeit.] Herausforderung, um Concurrency sowohl lokal als auch nicht lokal zu skalieren.
 	
-	\item[Transparenz.] Überbrückung der Kluft zwischen lokaler und nicht lokaler Concurrency. Transparenz ist derzeit ein umstrittenes Thema. Einige Wissenschaftler befürworten eine strikte Trennung zwischen lokaler Concurrency mit Concurrent Programmiersprachen (z.B. Java und C#) und nicht lokaler Concurrency mit REST \footnote{Representational state transfer} für Webdienste. Eine klare Trennung schafft Probleme, wenn es wünschenswert oder notwendig ist, von lokalen Diensten auf Webdienste umzusteigen.
+	\item[Transparenz.] Überbrückung der Kluft zwischen lokaler und nicht lokaler Concurrency. Transparenz ist derzeit ein umstrittenes Thema. Einige Wissenschaftler befürworten eine strikte Trennung zwischen lokaler Concurrency mit Concurrent Programmiersprachen (z.B. Java und C\#) und nicht lokaler Concurrency mit REST (Representational state transfer) für Webdienste. Eine klare Trennung schafft Probleme, wenn es wünschenswert oder notwendig ist, von lokalen Diensten auf Webdienste umzusteigen.
 	
 	\item[Inkonsistenz.] Inkonsistenz ist ein häufiges Problem bei großen Informationssysteme. Zahlreiche Algorithmen aus dem Bereich verteilter Systemen sind dazu ausgerichtet, diese Inkonsistenzen zu eliminieren oder ihnen auszuweichen.
 \end{description}
 
+\subsection{Umsetzung des Aktormodells in höheren Programmiersprachen}
+
+Im Allgemeinen gibt es für die Kapselung von Abstraktionen in der Informatik drei Ansätze: ein Framework, eine Bibliothek oder die direkte Umsetzung in der Programmiersprache. Das Aktormodell wird meistens in Form einer Bibliothek oder - in einigen Programmiersprachen - direkt implementiert.
+
+Eine der Bekanntesten Implementierungen des Actor Models ist die Programmiersprache Erlang. Diese bringt 3 Konzepte zusammen: funktionale Programmierung, verteilte Programmierung und das Aktormodell. Joe Armstrong, der geistige Vater von Erlang, bezeichnet die Sprache am liebsten als \textit{"nebenläufig ausgerichtete Programmiersprache"}, in der Prozesse die wichtigsten Objekte sind. Erlang ist eine der wenigen funktionalen Programmiersprachen, die in der Industrie eingesetzt wird. Insbesondere Telefon- und Netzwerkausrüster setzen Erlang aufgrund seiner guten Skalierbarkeit und Parallelität ein. Die Entwicklung von Erlang begann im Jahre 1986 bei Ericsson. 1998 enthielt der neue \textit{Ericsson AXD 301 Switch} schon mehr als eine Million Zeilen von Erlang Code. Damals hat Erlang mit seinen Paradigmen \textit{"alles ist ein Prozess"}, \textit{"die einzige Kommunikation ist der Nachrichtenaustausch"}, \textit{"keine lokale Fehlerbehandlung"} und \textit{"reibungslose Updates ohne Ausfallzeit”"} für Ericsson die Verfügbarkeit von 99.999999999\% (sogenannte “neun Neuens”) gewährleistet. 2014 berichtete Ericsson, dass Erlang in der Entwicklung von Software für GPRS, UMTS und LTE Netzwerke verwendet wurde. Die Telekommunikationsindustrie ist nicht das einzige Beispiel, wo Erlang erfolgreich eingesetzt wurde. Seit der Veröffentlichung als Open Source wird die Programmiersprache sehr erfolgreich bei Vocalink (ein Unternehmen von MasterCard), Klarna (Sofort Überweisungen) und WhatsApp eingesetzt.
+
+Ein anderer Ansatz ist die Implementierung des Aktormodells in Form einer Bibliothek. Nach der auf Wikipedia veröffentlichten Liste von Actor Bibliotheken existieren mindestens 51 solcher Projekte, die in der aktiven Entwicklungsphase sind. Die fünf populärsten Bibliotheken sind in der Tabelle \ref{tab:vergleichBibliotheken} aufgelistet.
+
+\begin{table} \centering
+	\begin{tabular}{|p{1.5cm}|p{4cm}|p{4cm}|p{4cm}|} 
+		\hline
+		\textbf{Name} & \textbf{Programmiersprache} & \textbf{Sterne auf Github} & \textbf{Contributors auf Github}\\
+		
+		\hline
+		Ray & Python & 13 900 & 1 200 \\
+		
+		\hline
+		Vert.x & Java & 11 500 & 200 \\
+		
+		\hline
+		Akka & Scala & 11 200 & 700 \\
+		
+		\hline
+		Orleans & C\# & 7 100 & 300 \\
+		
+		\hline
+		Actix & Rust & 5 800 & 90 \\
+
+		\hline
+	\end{tabular}
+	\caption{Popularität von Bibliotheken, die das Aktormodell implementieren (Stand 23.12.2020).}
+	\label{tab:vergleichBibliotheken}
+\end{table}
+
+Obwohl das Aktormodell schon 1970 definiert wurde, gewann es erst nach dem Entstehen von Erlang und Scala an Popularität (bzw. mit der Umsetzung des Aktormodells für diese Programmierungssprachen). 
+
+Was Scala im Bezug auf das Aktormodell auszeichnet, ist die Tatsache, dass es zwei von der Scala Community akzeptierte Implementierungen des Aktormodells gibt: die erste Implementierung ist wie ein Teil der Programmierungssprache umgesetzt, die zweite ist in Form einer Bibliothek realisiert und heißt \textit{Akka}. Akka unterstützt unterschiedliche Modelle von Concurrency mit einem starken Fokus auf die Aktor-basierte Concurrency. Es ist nicht überraschend, dass die primäre Inspiration für Akka Erlang war.
 
 
+\textbf{Scala Aktoren.} Laut der Grundidee von Aktoren in Scala, sollen sie nicht nur eine verständliche sondern auch eine leichtgewichtige Alternative zur üblichen parallelen Programmierung in der JVM mit Java Threads darstellen. Diese Leichtgewichtigkeit lässt sich jedoch nicht erreichen, wenn jeder Aktor durch einen Thread abgebildet wird, da Threads in der JVM einen sehr hohen Speicherverbrauch haben, um Threads anzuhalten, ihren Zustand zu speichern und fortzusetzen. Dieses sogenannte Context-Switching ist sehr aufwändig. Scala nutzt hierfür bspw. ein eigenes Threading-Modell und nicht das des darunterliegenden Betriebssystems. Eine Alternative zum thread-basierten ist ein ereignis-gesteuerter Ansatz, wofür man üblicherweise bestimmte Event-Handler in der Ausführungsumgebung registriert und diese beim Eintreten dieser Ereignisse aufgerufen werden. Dies nennt man \textit{"Inversion of Control"}, da man den Kontrollfluss des Programms an die Umgebung abgibt. Diese entscheidet, wann diese Funktionen aufgerufen werden.
 
+In Scala gibt es event-basierte Aktoren ohne inversion of control und Thread-basierte Aktoren. Beide Arten von Aktoren sind gemeinsam im Actor Trait definiert. Innerhalb der Empfangsmethode wird ein Pattern-Matching durchgeführt, um zu überprüfen, ob der Aktor diese Nachricht annehmen kann. Ist dies der Fall, wird die entsprechende Berechnung durchgeführt. Ist der Aktor mit der Verarbeitung einer Nachricht beschäftigt, kommt die gesendete Nachricht in eine Queue und wird später verarbeitet. Kann der Aktor die Nachricht nicht bearbeiten, wird sie verworfen.
 
+Thread-basierte Aktoren eignen sich bspw. für I/O Operationen, welche ohnehin blockiert wären, wohingegen die event-basierten Aktoren in sehr großer Anzahl verwendet werden können. Um event-basierte Aktoren in so großer Anzahl zu ermöglichen, wird ein angehaltener Aktor, welcher bspw. in seiner receive Methode auf den Empfang einer Nachricht wartet, in Scala nicht durch einen Thread abgebildet. Weitere wichtige Eigenschaften von Akka und dem Aktormodell werden im nächsten Kapiteln behandelt.
 
+\subsection{Umsetzung des Aktormodells in eingebetteten Systemen}
 
-
-
-
-
-
-
-
-
-
-
-
+Unter den höheren Programmiersprachen existieren zahlreiche Frameworks für das Aktormodell und nebenläufige Berechnungen. Im Embedded Bereich, zu dem unbemannte Luftfahrzeuge gehören, schaut die Situation anders aus.
 
 \begin{description} 
-	\item[.] 
+	\item[Abstraktionsschicht der Hardwaresprachen.] Die Sprachen, die die Hardware von eingebetteten Systemen beschreiben und mit denen sie sich programmieren lassen, gehen mit sehr spezifischen Komponenten um, sind an Hardware sehr eng gebunden und stellen keine Abstraktionen zur Verfügung. Darüber hinaus werden diese Sprachen als sogenannte \textit{Hardwarebeschreibungssprachen} bezeichnet. Das heißt, dass sie keine Programmiersprachen sind, obwohl sie Objekte beschreiben, deren Aufgabe meist die Informationsverarbeitung ist. Der Entwicklungsprozess für Embedded Geräte umfasst vor allem die Erstellung eines Modells für die Hardware und die Erzeugung einer textbasierten Beschreibung für das System. Ein leuchtendes Beispiel aus dieser Sprachfamilie ist die Hardwarebeschreibungssprache VHDL.
 	
-	\item[.] 
+	Hardwarebeschreibungssprachen werden an dieser Stelle erwähnt, weil die Probleme, die man mit Modellen für Concurrency in höheren Programmiersprache löst, in der Embedded Welt und bei der Beschreibung von Hardware mit sehr ähnlichen Abstraktionen in modellbasierten Design- und Simulationswerkzeugen gelöst werden. Das heißt, Modelle aus den beiden Welten (Softwareentwicklung und Systementwicklung) haben dieselben Wurzeln, aber die Interpretationen unterscheiden sich bei ausführlicher Betrachtung. Eines der Projekte, das zum Ziel hat, Modellierung, Simulation und das Design von nebenläufigen, eingebetteten und Echtzeitsystemen einfacher zu machen, ist \textit{Ptolemy II}.
 	
-	\item[.] 
+	
+	\item[Modellierung.] Ptolemy II ist ein Open Source Framework, das Experimente mit aktororientiertem Design unterstützt. Im Kontext von Ptolemy II sind Aktoren Softwarekomponenten, die gleichzeitig ausgeführt werden und über Nachrichten kommunizieren, die über miteinander verbundene Ports gesendet werden. Ein Modell ist eine hierarchische Verbindung von Aktoren. Ein Schwerpunkt des Projekts liegt darin, heterogene Kombinationen von Berechnungsmodellen, kontinuierlichen Zeitmodellen mit Zustandsmaschinen und synchronen/reaktiven Systemen mit Zustandsmaschinen zu verstehen.
+	
+	Ptolemy II konzentriert sich auf die aktororientierte Modellierung komplexer Systeme und bietet einen Ansatz für nebenläufige Berechnungen. Der zentrale Begriff bei der hierarchischen Modellzerlegung ist die Domain, die ein bestimmtes Berechnungsmodell implementiert. Technisch dient eine Domain dazu, den Steuerungs- und Datenfluss zwischen Komponenten von der tatsächlichen Funktionalität einzelner Komponenten zu trennen.
+	
+	Ptolemäus II ermöglicht die Verwendung einiger Domains, die im  Systemdesign, der Modellierung und der Simulation verwendet werden:
+	
+	\begin{description} 
+		\item[Dataflow.] Die Ausführung eines Aktors in der Dataflow-Domain besteht aus einer Folge von \textit{"Firings"}, wobei jeder Firing als Reaktion auf die Verfügbarkeit von Eingabedaten erfolgt. Ein \textit{Firings} ist eine für gewöhnlich kleine Berechnung, die die Eingabedaten verwendet und Ausgabedaten erzeugt. Dataflow Modelle sind ideal für die Darstellung von Streaming Systemen, bei denen Sequenzen von Datenwerten in relativ regelmäßigen Mustern zwischen Komponenten fließen. Signalverarbeitungssysteme, wie Audio- und Videosysteme, passen besonders gut zusammen.
+		
+		\item[Prozessnetzwerke.] In der Domain des Prozessnetzwerks stellen Aktoren Prozesse dar, die über FIFO-Queues (konzeptionell unendlicher Kapazität) kommunizieren. Das Schreiben in die Queues ist eine nicht-blockierende Operation, während das Lesen aus einer leeren Queue einen Reader Prozess blockiert. Die einfache Strategie des blockierenden Lesens und des nicht-blockierenden Schreibens gewährleistet den Determinismus des Modells. Ein Prozessnetzwerk eignet sich zur Beschreibung nebenläufiger Prozesse, die durch einen asynchronen Nachrichtenaustausch miteinander kommunizieren. Prozessnetzwerke kann man als das Aktormodell betrachten, das in höheren Programmiersprachen verwendet wird. Mit Prozessnetzwerken kann man auch die Vorgänge in verteilten Systemen darstellen. Der einzige Unterschied zur ursprünglichen Definition eines verteilten Systems besteht darin, dass die Nachrichten in der Versandreihenfolge zwar zugestellt werden, die genaue Zeit allerdings nicht vorher festgelegt ist. In der klassischen Modellierung von verteilten Systemen wird angenommen, dass alle Nachrichten eventuell zugestellt werden müssen, jedoch die Reihenfolge, in der sie ankommen, ist nicht definiert.
+		
+		\item[Rendezvous.] Die Rendezvous-Domain ähnelt einem Prozessnetzwerk insofern, dass Aktoren gleichzeitige Prozesse darstellen. Im Gegensatz zur Semantik \textit{"Fire And Forget"} von Prozessnetzwerken kommunizieren Aktoren in der Rendezvous-Domain jedoch durch den atomaren sofortigen Datenaustausch. Wenn ein Aktor Daten an einen anderen Aktor sendet, wird der Sender blockiert, bis der Empfänger empfangsbereit ist. Wenn ein Aktor versucht, Eingabedaten zu lesen, wird er auch blockiert, bis der Sender der Daten bereit ist, die Daten zu senden. Infolgedessen bleibt der Prozess, der als erster einen Treffpunkt erreicht, blockiert, bis der andere Prozess denselben Treffpunkt erreicht. In dieser Domain ist es auch möglich, Mehrweg-Rendezvous zu erstellen, bei dem mehrere Prozesse den Rendezvous Punkt erreichen müssen, bevor ein Prozess fortgesetzt werden kann. Die Rendezvous-Domäne ist besonders nützlich für die Modellierung von Problemen, bei denen eine einzelne Ressource von mehreren asynchronen Prozessen gemeinsam genutzt wird.
+		
+		Die Tatsache, dass die Rendezvous-Domain auf der Prozessalgebra von Tony Hoare basiert, macht klar, dass das Communicating Sequential Processes Concurrency Modell und Rendezvous dieselben Wurzeln in der akademischen Forschung haben.
+		
+		\item[Discrete Event.] In der Discrete Event Domain kommunizieren Aktoren über Events, die auf einer Zeitleiste platziert sind. Jedes Event hat einen Wert und einen Zeitstempel. Aktoren verarbeiten Events in chronologischer Reihenfolge. Die von einem Aktor erzeugten Ausgabeevents müssen nicht früher als die verbrauchten Eingabeevents vorliegen. Anders gesagt sind Aktoren in der Discrete Event Domain kausal.
+		
+		Die Ausführung dieses Modells verwendet eine globale Event-Queue. Wenn ein Akteur ein Event generiert, wird das Event entsprechend seines Zeitstempels in die Queue eingefügt. Während jeder Iteration des Modells werden die Events mit dem kleinsten Zeitstempel aus der globalen Event Queue entfernt und der entsprechende Aktor wird ausgelöst.
+		
+		Discrete Event eignet sich gut für die Modellierung des Verhaltens komplexer Systeme im Zeitverlauf. Es kann beispielsweise Netzwerke, digitale Hardware und Finanzsysteme modellieren.
+	\end{description}
 \end{description}
 
-\begin{enumerate}
-	\item 
-	
-	\item 
-	
-	\item 
-	
-	\item 
-\end{enumerate}
+Die oben aufgelisteten Modelle sind Beispiele davon, wie Hardwarebeschreibungssprachen und höhere Programmiersprachen verflochten sind. Die Anwendung von ähnlichen Abstraktionen bei der Systementwicklung ist sinnvoll und etabliert eine \textit{"gemeinsame Sprache"} für Entwickler von Hardware- und Softwarekomponenten.
+
+Am Beispiel des Process Network Modells für eingebettete Systeme sieht man, dass es dieselbe Wurzeln wie die Aktormodelle für höhere Programmiersprachen hat.
+
+Viele von den heutzutage entwickelten Systemen kombinieren heterogene und oft komplexe Subsysteme. Ein modernes Auto kann einen komplexen Motor, elektronische Steuergeräte, Traktionskontrollsysteme, Karosserieelektronik (zur Steuerung von Fenstern und Türschlössern), Infotainmentsysteme, Klimatisierung und Belüftung sowie eine Vielzahl von Sicherheits-Subsystemen (wie Airbags) kombinieren. Jedes Subsystem wird mit einer Kombination aus Software, Elektronik und mechanischen Teilen realisiert. Die Entwicklung derart komplexer Systeme ist sehr anspruchsvoll, da zum Teil selbst kleinste Teilsysteme mehrere Ingenieurdisziplinen umfassen.
+
+\section{Fazit}
+
+Der Drohnenschwarm ist ein komplexes System, das aus mehreren Rechenknoten besteht, die Kommunikation, Synchronisation und Koordination für die Zusammenarbeit brauchen. Die Zusammenarbeit im Offline-Modus (ohne Verbindung zur Cloud) oder mit der begrenzten Erreichbarkeit des zentralen Servers ist nur dann möglich, wenn es im Schwarm einen Leader gibt, der die Konsistenz von Daten garantiert und sich mit der Cloud synchronisiert. Für die Lösung dieser Aufgabe gibt es mehrere Algorithmen, von denen sich besonders Raft mit seiner Erklärbarkeit und Einfachheit auszeichnet.
+
+Für die Umsetzung eines verteilten Systems ist auch ein Concurrency Modell nötig. Verteilte Systeme stellen folgende Anforderungen an das Modell: standardmäßige Fehlertoleranz und Unterstützung des verteilten Rechnens. Von den Modellen, die in diesem Kapitel behandelt werden, ist das Aktormodell dafür am besten geeignet.
+
+Eine gute Perspektive auf die Theorie und Modellierung von nebenläufigen, eingebetteten Systemen gibt Ptolemy II. Ptolemy II hat als ein Design-Werkzeug und als Framework ein sehr interessantes Problem aufgeworfen, was für die Entwicklung von aktorbasierten Systemen wichtig ist. Wie müssen die Aktoren aufgegliedert sein? Wie viele Aktoren muss es in einem System geben? Die Antwort lautet: wenn die Akteure relativ klein sind - also für jede Kommunikation weniger Berechnungen durchführen - kann das Overhead von Multithreading und Kommunikation zwischen Threads die Leistungsvorteile der parallelen Ausführung überwältigen. Daher sollten Ingenieure Leistungsvorteile nur für große oder mittelgroße Aktore erwarten.
