@@ -342,6 +342,80 @@ Raft wurde als Basis für folgende Systeme genommen:
 	\item etcd
 \end{enumerate}
 
+\subsection{Der Vergleich von Paxos und Raft}
+
+Um die Entscheidung zu treffen, mit welchem Algorithmus ein Produktivsystem implementiert werden soll, muss man sie anhand bestimmter Kriterien vergleichen. Die Algorithmen haben natürlich Ähnlichkeiten aber auch Unterschiede.
+
+\begin{description} 
+	\item[Ähnlichkeiten.] Paxos und Raft sind schon deswegen sehr ähnlich, weil sie das Problem des Konsenses in verteilten Systemen lösen, was ein Subproblem des Atomic Broadcasts darstellt (Atomic Broadcasts wird in Probleme des Reliable Broadcasts und Konsenses zerlegt). Beide Algorithmen erfüllen Anforderungen an Safety, Availability und Zeitunabhängigkeit.
+	
+	Sowohl Paxos als auch Raft versuchen, eine Gesamtreihenfolge von Befehlen zu bestimmen, die auf den replizierten Zustandsautomaten angewendet werden sollen. Diese Algorithmen lösen das gleiche Problem und verfolgen auch den gleichen Ansatz: beide wählen einen Leader, der Befehle in seinen Log hinzufügt und zu einem Quorum repliziert. Wenn ein Leader abstürzt, kommt ein Quorum zusammen und wählt einen neuen Leader. Beide Algorithmen garantieren, dass ein Knoten zum Leader ernannt wird, wenn er Stimmen von einem Quorum aller Knoten erhält. Außerdem haben Paxos und Raft immer nur einen Leader. Im Normalbetrieb hängt der Leader jede Operation an sein Log an und fordert andere Knoten auf, dasselbe zu tun. Sobald ein Quorum das getan hat, markiert der Leader den Logeintrag als \textit{"commited"} (erfolgreich repliziert).
+	
+	Wenn ein Follower glaubt, dass der Leader abgestürzt ist, wird der Follower zum Kandidaten und ersucht alle anderen Knoten für ihn zu stimmen. Wenn der Kandidat Stimmen von der Mehrheit aller Knoten (Quorum) bekommt, wird er zum Leader. Hier enden die Ähnlichkeiten beider Algorithmen.
+	
+	
+	\item[Technische Unterschiede.] Der größte Unterschied zwischen Paxos und Raft ist, wie die Safety Eigenschaft (always returning a correct result) von Paxos und Raft gewährleistet wird.
+	
+	In Paxos wird ein Follower für jeden Kandidaten stimmen, der um eine Stimme ersucht. Daher muss die Antwort eines Followers alle bei dem Kandidaten fehlenden Logeinträge enthalten. Der Nachteil dieses Verfahrens ist die Belastung des Netzwerks, wenn ein Follower, der lange Zeit nicht erreichbar war, zu einem Kandidaten wird. Dieser Kandidat wird eine lange Liste von fehlenden Einträgen benötigen, was unter anderem eine langsame Zusammenführung aller fehlenden Einträge zur Folge hat. In Raft seinerseits wird ein Follower nur den Kandidaten anerkennen, der mindestens genauso einen aktuellen Log hat, wie der Follower. Generell wollte der Erfinder des Raft-Algorithmus die Einfachheit auf zwei Arten erreichen: die Anzahl von Nachrichten zu reduzieren und den Wahlprozess zu optimieren.
+	
+	In der Abbildung \ref{fig:logstate} wird ein Cluster mit fünf Knoten abgebildet. Der Knoten 1 ist der Leader, der Knoten 4 (mit einem einzelnen Eintrag im Log) ist ein Follower, der eine lange Zeit keine Updates von dem Leader erhalten hat. Laut dem Paxos-Algorithmus kann der vierte Follower auch zum Leader gewählt werden. Wenn er tatsächlich zum Leader gewählt wird, muss er alle fehlenden Logeinträge anordnen. Laut Raft also entweder der dritte oder fünfte Knoten. Nur diese beiden Knoten haben einen Log, der zumindestens genauso aktuell ist, wie der Log bei einem Quorum aller Knoten.
+	
+	\begin{figure}
+		\centering
+		\includegraphics[width=0.7\linewidth]{images/2_log_state}
+		\caption{Zustand eines Logs.}
+		\label{fig:logstate}
+	\end{figure}
+	
+	
+	\item[Nicht technische Unterschiede.] Wenn man den Inhalt der ursprünglichen Publikation der Paxos- und Raft-Algorithmen vergleicht, wirkt der Raft-Algorithmus deutlich verständlicher und einfacher zu implementieren. Darauf hat der Autor des Raft-Algorithmus mehrmals hingedeutet. Das wurde auch durch eine Reihe von Publikationen bestätigt (Paxos Made Simple, Paxos Made Moderately Complex, Paxos Made Live), die versucht haben, den ursprünglichen Paxos-Algorithmus simpler zu erläutern. Es ist erwähnenswert, dass die erste von diesen Publikationen vom Autor des Paxos Algorithmus verfasst wurde.
+\end{description}
+
+Die Praxisorientiertheit und der Pragmatismus von Raft werden auch durch die Erwähnung bestimmter Technologien für den Nachrichtenaustausch hervorgehoben. Diese Technologie nennt sich \textit{RPC} (Remote Procedure Call). In der Publikation des Paxos-Algorithmus gibt es keine solchen Tipps.
+
+Der Vergleich in der Tabelle \ref{tab:vergleich} zeigt deutlich, dass Raft durch seine Erklärbarkeit und pragmatische Darstellung einen frischen Blick auf moderne verteilte Systeme wirft und die Optimierung der Replikation eine bessere Option für ein Produktivsystem darstellt. Das wird auch durch seine in den letzten Jahren schnell gestiegene Popularität bei großen kommerziellen Projekten (z.B. HashiCorp Consul) bestätigt.
+
+\begin{table} \centering
+	\begin{tabular}{|p{5cm}|p{5cm}|p{5cm}|} 
+		
+		\hline
+		&  \textbf{Raft} & \textbf{Paxos}\\
+		
+		\hline
+		Veröffentlichung & 2014 & 1998\\
+		
+		\hline
+		Erklärbarkeit des Algorithmus in der ursprünglichen Publikation laut dem Raft Artikel & Sehr gut & Mittelmäßig\\
+		
+		\hline
+		Erklärbarkeit des Kerns des Algorithmus laut dem Raft Artikel  & Gut & Gut\\
+		
+		\hline
+		Spielraum bei der Implementierung & Weniger Spielraum. Einfach zu implementieren. & Mehr Spielraum. Viele Annahmen müssen getroffen werden.\\
+		
+		\hline
+		Gewährleistung der Safety Eigenschaft & Nur der Kandidat mit dem aktuellsten Stand des Logs wird gewählt. Optimale Nutzung der Netzwerk Ressourcen. & Jeder Kandidat darf gewählt werden. Zusendung fehlender Logeinträge ist erforderlich. Nutzung der Netzwerkressourcen ist nicht optimal.\\
+		
+		\hline
+	\end{tabular}
+	\caption{Vergleich der Raft und Paxos Algorithmen}
+	\label{tab:vergleich}
+\end{table}
+
+\section{Concurrency Modelle für die Umsetzung von verteilten Systemen}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
