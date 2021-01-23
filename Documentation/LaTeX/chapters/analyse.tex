@@ -484,8 +484,75 @@ Heutzutage existieren unterschiedliche Concurrency Modelle, die unterschiedliche
 	
 	Reine Funktionen und Referentielle Transparenz ermöglichen Parallelisierung von Berechnungen oder den Betrieb in einer Concurrent Umgebung mit sehr wenig Aufwand. Da der Code im funktionalen Stil den veränderbaren Zustand eliminiert, sind die meisten Concurrency Fehler, die in traditionellen Thread und Mutex-basierten Programmen auftauchen, unmöglich. Es wird erwartet, dass der funktionale Code weniger effizient ist als das imperative Äquivalent. Obwohl es Auswirkungen auf die Leistung für einige Arten von Aufgaben hat, ist die Leistungsminderung üblicherweise relativ klein. Eine solch geringe Leistungsminderung wird meist zugunsten der verbesserten Skalierbarkeit und Robustheit in Kauf genommen.
 	
-	\item[Communicating Sequential Processes (CSP).] CSP ist eine Prozessalgebra zur Beschreibung von Interaktionen zwischen kommunizierenden Prozessen. Die Idee wurde 1978 als imperative Sprache von Tony Hoare erstmals vorgestellt, dann von ihm zu einer formalen Algebra ausgebaut und 1985 mit der Veröffentlichung des Buchs mit dem gleichnamigen Titel “Communicating Sequential Processes” berühmt. Die Programmiersprachen Go beinhaltet praktische Implementierungen der CSP und stellt - im Gegensatz zu vielen neuen prozeduralen und objektorientierten Programmiersprachen - kein Threading Modell für Concurrency zur Verfügung. Concurrency in Go ist ressourcenschonend und ist wesentlich einfacher zu verwalten als übliche Thread Pools. Als Basis dafür fungieren zwei Konzepte:
+	\item[Communicating Sequential Processes (CSP).] CSP ist eine \textit{Prozessalgebra} zur Beschreibung von Interaktionen zwischen kommunizierenden Prozessen. Die Idee wurde 1978 als imperative Sprache von Tony Hoare erstmals vorgestellt, dann von ihm zu einer formalen Algebra ausgebaut und 1985 mit der Veröffentlichung des Buchs mit dem gleichnamigen Titel \textit{"Communicating Sequential Processes"} berühmt. Die Programmiersprachen Go \footnote{Go ist eine kompilierbare Programmiersprache, die Nebenläufigkeit unterstützt und über eine automatische Speicherbereinigung verfügt. Entwickelt wurde Go von Google Mitarbeitern} beinhaltet praktische Implementierungen der CSP und stellt - im Gegensatz zu vielen neuen prozeduralen und objektorientierten Programmiersprachen - kein Threading Modell für Concurrency zur Verfügung. Concurrency in Go ist ressourcenschonend und ist wesentlich einfacher zu verwalten als übliche Thread Pools. Als Basis dafür fungieren zwei Konzepte:
+	
+	\begin{description} 
+		\item[Goroutines.] Goroutine ist eine Funktion, die auf einem OS-Thread unabhängig von anderen Goroutinen läuft. Das bedeutet, dass ein OS-Thread mehrere Goroutinen abwechselnd ausführt. Goroutinen haben sehr kleinen Overhead für den Stack von nur ein paar Kilobytes.
+		
+		Vorteile von Goroutinen werden klar, wenn man einen Thread Pool von Threads und einen Thread Pool von Goroutinen vergleicht. Thread Pool ist ein guter Weg, um CPU-gebundene Tasks auszuführen. Das sind die Tasks, die einen Thread für eine kurze Zeit aus dem Pool nehmen und am Schluss dem Thread zurückgeben. Wenn so ein Thread aus dem Pool für Netzwerkkommunikation ausgeliehen wird und der Netzwerkcall unbestimmt lang dauert, verschwindet der Nutzen des Thread Pools komplett. Wäre es ein Pool von Goroutinen, könnte man mit weniger Aufwand ressourcenschonender programmieren.
+		
+		\item[Channels.] Ein Channel ist eine Pipeline, die zwei miteinander kommunizierende Goroutinen verbindet. Über einen Channel können Goroutinen strukturierte Daten austauschen. Ein Channel ist eine thread-safe Queue. Jede Goroutine mit einer Referenz auf die Queue kann Nachrichten an einer Seite einfügen und an der anderen Seite entfernen. Im Gegensatz zum Aktormodell, in dem Nachrichten von und an bestimmte Aktoren geschickt werden, muss hier der Sender den Empfänger nicht kennen und umgekehrt. Channel ist ein primärer Datentyp, der Go mit dem Stammbaum von CSP bezogenen Programmiersprachen verbindet.
+	\end{description}
+
+	Der Slogan von Go im Bezug auf Concurrency heißt “Do not communicate by sharing memory; instead, share memory by communicating.”
+	
 \end{description}
+
+\begin{table} \centering
+	\begin{tabular}{|P{3cm}|P{3cm}|P{3cm}|P{3cm}|P{3cm}|} 
+		\hline
+		&  \textbf{Aktormodell} & \textbf{CSP} & \textbf{Funktionale Programmierung} & \textbf{Threads und Mutex}\\
+		
+		\hline
+		Primär Fokus & Fehlertoleranz und verteiltes Rechnen & Flexibilität und Ausdruckskraft & Nebeneffektefreiheit durch Immutability & Effizienz und breite Anwendbarkeit\\
+		
+		\hline
+		Entkopplung von Producer-Consumer & - & + & nicht anwendbar & nicht anwendbar\\
+
+		\hline
+		Direktes Teilen des Zustands & - & - & - & +\\
+		
+		\hline
+		Kommunikationsmuster & standardmäßig bidirektional zwischen den Aktoren & standardmäßig bidirectional zwischen den Coroutinen, unidirektional mit einer “receive-only” oder “send-only” Queue & nicht anwendbar & exklusive Nutzung von Arbeitsspeicher-bereichen\\
+		
+		\hline
+		Struktur von ausführbaren Codeeinheiten & Baum & flach & flach & flach\\
+		
+		\hline
+		Hinzufügen neuer Nachrichten durch & Neue Match Cases innerhalb des Aktors & Weitergabe von neuen Queues in eine Goroutine & nicht anwendbar & nicht anwendbar\\
+
+		\hline
+		Fehlertoleranz by Design & + & - & - & -\\
+		
+		\hline
+		Verteiltes Rechnen standardmäßig & + & - & - & -\\
+		
+		\hline
+	\end{tabular}
+	\caption{Vergleich von Concurrency Modellen.}
+	\label{tab:vergleichConcurrencyModelle}
+\end{table}
+
+Laut Tabelle \ref{tab:vergleichConcurrencyModelle} erfüllt nur das Aktormodell die Anforderungen an das Concurrency Modell für ein Drohnensystem. Der Grund dafür ist, dass das Aktormodell standardmäßig Fehlertoleranz und verteiltes Rechnen unterstützt, ein direktes Teilen des Zustands verbietet und den Aufbau einer baumartigen Struktur von ausführbaren Einheiten ermöglicht. Jedoch müssen die Eigenschaften des Aktormodells noch in Detail betrachtet werden.
+
+Das Actor Modell war kein Durchbruch in der Informatik, sondern eine inkrementelle Verbesserung von Ideen des \textit{Lambda-Kalküls}, des Nachrichtenaustauschs und der Interprozesskommunikation. Das Lambda-Kalkül diente als eine Inspiration für den Interpreter der Programmiersprache Lisp, die ihrerseits den Austausch von geteilten Datenstrukturen ohne Parallelität ermöglicht hat. Danach war Simula 67 Pionier bei der Verwendung des Nachrichtenaustauschs für Berechnungen aller Art, motiviert durch diskrete Simulationsanwendungen. 1971 beschäftigte sich der Erfinder des Actor Modells mit der Programmiersprache Smalltalk-71 und war erstaunt von der Komplexität des Nachrichtenaustauschs. Das führte 1973 zur Veröffentlichung vom ersten Whitepaper zum Thema \textit{"Actor Model"}. Das Actor Modell, das wir heute kennen, ist ein Ergebnis von einer Reihe von Dissertationen und wurde erst 1985 endgültig formalisiert.
+
+Die grundlegende Herausforderung bei der Definition des Aktormodells ist, dass es keinen globalen Zustand bereitstellt. Das bedeutet, dass ein Rechenschritt innerhalb eines Aktors den Zustand von dem ganzen System  nicht ändert. Der Zustand wird in dem Fall zwischen mehreren in das System involvierten Aktoren geteilt. Da jeder Aktor seine eigenen lokalen Daten verwaltet, muss man sich um gleichzeitige Zugriffe auf diese Daten keine Sorgen machen. Deshalb wird das Aktormodell auch als \textit{"shared-nothing"} Modell bezeichnet.
+
+Die ursprüngliche Definition des Aktmodells befasste sich mit einem abstrakten Aktor ohne einer Anknüpfung zu einer bestimmten Technologie. In einem Aufsatz aus dem Jahr 2010 hat der Erfinder des Aktormodells Carl Hewitt das von ihm entwickelte Modell im Kontext der modernen verteilten Systemen (Rechenzentren und Webdienste) überdacht und noch folgende Herausforderungen gefunden:
+
+\begin{description} 
+	\item[Skalierbarkeit.] Herausforderung, um Concurrency sowohl lokal als auch nicht lokal zu skalieren.
+	
+	\item[Transparenz.] Überbrückung der Kluft zwischen lokaler und nicht lokaler Concurrency. Transparenz ist derzeit ein umstrittenes Thema. Einige Wissenschaftler befürworten eine strikte Trennung zwischen lokaler Concurrency mit Concurrent Programmiersprachen (z.B. Java und C#) und nicht lokaler Concurrency mit REST \footnote{Representational state transfer} für Webdienste. Eine klare Trennung schafft Probleme, wenn es wünschenswert oder notwendig ist, von lokalen Diensten auf Webdienste umzusteigen.
+	
+	\item[Inkonsistenz.] Inkonsistenz ist ein häufiges Problem bei großen Informationssysteme. Zahlreiche Algorithmen aus dem Bereich verteilter Systemen sind dazu ausgerichtet, diese Inkonsistenzen zu eliminieren oder ihnen auszuweichen.
+\end{description}
+
+
+
+
+
 
 
 

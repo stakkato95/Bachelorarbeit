@@ -16,13 +16,19 @@
 %%%----------------------------------------------------------
 
 \RequirePackage[utf8]{inputenc}		% bei der Verw. von lualatex oder xelatex entfernen!
+
 \usepackage[parfill]{parskip}
+
 % uspackage below is for listing name of formula's variables
 \usepackage{array,tabularx}
 \newenvironment{conditions*}
 {\par\vspace{\abovedisplayskip}\noindent
 	\tabularx{\columnwidth}{>{$}l<{$} @{\ : } >{\raggedright\arraybackslash}X}}
 {\endtabularx\par\vspace{\belowdisplayskip}}
+
+% wrapping log words
+\newcolumntype{P}[1]{>{\hspace{0pt}}p{#1}}
+
 % TODO: \usepackage{graphicx} required
 
 \graphicspath{{images/}}    % Verzeichnis mit Bildern und Grafiken
