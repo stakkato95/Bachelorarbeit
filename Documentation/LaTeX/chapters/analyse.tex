@@ -5,7 +5,7 @@ Um die Problemstellung der Arbeit besser zu verstehen, muss man einige grundlege
 
 \section{Vorteile von Drohnenschwärmen}
 
-Heutzutage werden Drohnen entweder einzeln verwendet oder sie finden in einem Drohnenschwarm ihre Anwendung. Beide Verwendungsarten haben Vor- und Nachteile und umfassende Anwendungsfälle. Um den Weg von einer Drohne zu einem Drohnenschwarm zu verstehen, muss man zuerst die Forschungsrichtungen im Feld von UAVs (Unmanned Aerial Vehicles) betrachten. Zu UAVs gibt es vier Forschungsschwerpunkte, die an entsprechende Herausforderungen gebunden sind:
+Heutzutage werden Drohnen entweder einzeln verwendet oder sie finden in einem Drohnenschwarm ihre Anwendung. Beide Verwendungsarten haben Vor- und Nachteile und umfassende Anwendungsfälle. Um den Weg von einer Drohne zu einem Drohnenschwarm zu verstehen, muss man zuerst die Forschungsrichtungen im Feld von UAVs \footnote{Ein UAV ist ein Luftfahrzeug, das ohne eine an Bord befindliche Besatzung autark durch einen Computer oder vom Boden über eine Fernsteuerung betrieben und navigiert werden kann.} (Unmanned Aerial Vehicles) betrachten. Zu UAVs gibt es vier Forschungsschwerpunkte, die an entsprechende Herausforderungen gebunden sind:
 
 \begin{enumerate}
 	\item Ein einziges UAV muss stets in der Lage sein, bestimmte Gebiete und Flächen zu überfliegen.
@@ -17,7 +17,7 @@ Heutzutage werden Drohnen entweder einzeln verwendet oder sie finden in einem Dr
 Diese Bachelorarbeit fokussiert sich auf Drohnenschwärme und auf die Koordination zwischen den einzelnen Drohnen \cite{Mondada03swarm-bot:a}. Betrachtet man eine Gruppe von Drohnen, stellt man fest, dass man einen Algorithmus benötigt, der die Funktionsweise dieser Gruppe optimiert, damit diese durch Zusammenarbeit ein gemeinsames Ziel erreicht. Unter anderem können folgende Probleme durch die Anwendung eine Schwarms gelöst werden:
 
 \begin{description} 
-	\item[Verteilung von Rechenoperationen (optimale Nutzung von Ressourcen).] Das ist ein klassischer Anwendungsfall aus der Informatik. Keine einzelne Drohne hat genug Rechenleistung, um eine schwierige Operation im Stand-Alone-Betrieb bzw. ohne Verbindung zur Cloud zu berechnen. Dadurch, dass es in einem Schwarm mehrere Drohnen gibt, kann die Arbeit aufgeteilt werden. So einen Ansatz kann man “Ad-Hoc Cloud” nennen. Unter der optimalen Nutzung von Ressourcen kann man auch den Austausch von lokalen Karten und Sensorwerten verstehen.
+	\item[Verteilung von Rechenoperationen (optimale Nutzung von Ressourcen).] Das ist ein klassischer Anwendungsfall aus der Informatik. Keine einzelne Drohne hat genug Rechenleistung, um eine schwierige Operation im Stand-Alone-Betrieb bzw. ohne Verbindung zur Cloud zu berechnen. Dadurch, dass es in einem Schwarm mehrere Drohnen gibt, kann die Arbeit aufgeteilt werden. So einen Ansatz kann man \textit{"Ad-Hoc-Cloud"} nennen. Unter der optimalen Nutzung von Ressourcen kann man auch den Austausch von lokalen Karten und Sensorwerten verstehen.
 	
 	\item[Verteilung von Aufgaben.] Für eine bestimmte Art von Problemen, die Schwarmintelligenz zur Lösung benötigt, ist es wünschenswert, dass jede Drohne eine bestimmte Funktion übernimmt und durch ihre speziellen Fähigkeiten (künstliche Intelligenz) oder Ausrüstung (Sensoren und Aktuatoren) hilft, das gemeinsame Ziel zu erreichen.
 	Aus der Sicht der Ausfallsicherheit, Robustheit und Zuverlässigkeit eines verteilten Systems ist es immer besser, Tasks auf mehrere Geräte zu verteilen.  Dieser Zusammenhang wurde schon durch die Erfahrungen von Google mit verteilten Systemen bewiesen. Andererseits muss man mit dem Kommunikationsoverhead und der gestiegenen Komplexität bei der Entwicklung rechnen.
@@ -498,7 +498,7 @@ Heutzutage existieren unterschiedliche Concurrency Modelle, die unterschiedliche
 \end{description}
 
 \begin{table} \centering
-	\begin{tabular}{|P{3cm}|P{3cm}|P{3cm}|P{3cm}|P{3cm}|} 
+	\begin{tabular}{|P{2.5cm}|P{2.5cm}|P{2.5cm}|P{2.5cm}|P{2.5cm}|} 
 		\hline
 		&  \textbf{Aktormodell} & \textbf{CSP} & \textbf{Funktionale Programmierung} & \textbf{Threads und Mutex}\\
 		
@@ -557,7 +557,7 @@ Eine der Bekanntesten Implementierungen des Actor Models ist die Programmierspra
 Ein anderer Ansatz ist die Implementierung des Aktormodells in Form einer Bibliothek. Nach der auf Wikipedia veröffentlichten Liste von Actor Bibliotheken existieren mindestens 51 solcher Projekte, die in der aktiven Entwicklungsphase sind. Die fünf populärsten Bibliotheken sind in der Tabelle \ref{tab:vergleichBibliotheken} aufgelistet.
 
 \begin{table} \centering
-	\begin{tabular}{|p{1.5cm}|p{4cm}|p{4cm}|p{4cm}|} 
+	\begin{tabular}{|p{1.5cm}|p{4cm}|p{3.5cm}|p{3.5cm}|} 
 		\hline
 		\textbf{Name} & \textbf{Programmiersprache} & \textbf{Sterne auf Github} & \textbf{Contributors auf Github}\\
 		
@@ -589,7 +589,7 @@ Was Scala im Bezug auf das Aktormodell auszeichnet, ist die Tatsache, dass es zw
 
 \textbf{Scala Aktoren.} Laut der Grundidee von Aktoren in Scala, sollen sie nicht nur eine verständliche sondern auch eine leichtgewichtige Alternative zur üblichen parallelen Programmierung in der JVM mit Java Threads darstellen \cite{Odersky04anoverview}. Diese Leichtgewichtigkeit lässt sich jedoch nicht erreichen, wenn jeder Aktor durch einen Thread abgebildet wird, da Threads in der JVM einen sehr hohen Speicherverbrauch haben, um Threads anzuhalten, ihren Zustand zu speichern und fortzusetzen. Dieses sogenannte Context-Switching ist sehr aufwändig. Scala nutzt hierfür bspw. ein eigenes Threading-Modell und nicht das des darunterliegenden Betriebssystems. Eine Alternative zum thread-basierten ist ein ereignis-gesteuerter Ansatz, wofür man üblicherweise bestimmte Event-Handler in der Ausführungsumgebung registriert und diese beim Eintreten dieser Ereignisse aufgerufen werden. Dies nennt man \textit{"Inversion of Control"}, da man den Kontrollfluss des Programms an die Umgebung abgibt. Diese entscheidet, wann diese Funktionen aufgerufen werden.
 
-In Scala gibt es event-basierte Aktoren ohne inversion of control und Thread-basierte Aktoren \cite{Odersky09scalaactors}. Beide Arten von Aktoren sind gemeinsam im Actor Trait definiert. Innerhalb der Empfangsmethode wird ein Pattern-Matching durchgeführt, um zu überprüfen, ob der Aktor diese Nachricht annehmen kann. Ist dies der Fall, wird die entsprechende Berechnung durchgeführt. Ist der Aktor mit der Verarbeitung einer Nachricht beschäftigt, kommt die gesendete Nachricht in eine Queue und wird später verarbeitet. Kann der Aktor die Nachricht nicht bearbeiten, wird sie verworfen.
+In Scala gibt es event-basierte Aktoren ohne inversion of control und Thread-basierte Aktoren \cite{scalaactors}. Beide Arten von Aktoren sind gemeinsam im Actor Trait definiert. Innerhalb der Empfangsmethode wird ein Pattern-Matching durchgeführt, um zu überprüfen, ob der Aktor diese Nachricht annehmen kann. Ist dies der Fall, wird die entsprechende Berechnung durchgeführt. Ist der Aktor mit der Verarbeitung einer Nachricht beschäftigt, kommt die gesendete Nachricht in eine Queue und wird später verarbeitet. Kann der Aktor die Nachricht nicht bearbeiten, wird sie verworfen.
 
 Thread-basierte Aktoren eignen sich bspw. für I/O Operationen, welche ohnehin blockiert wären, wohingegen die event-basierten Aktoren in sehr großer Anzahl verwendet werden können. Um event-basierte Aktoren in so großer Anzahl zu ermöglichen, wird ein angehaltener Aktor, welcher bspw. in seiner receive Methode auf den Empfang einer Nachricht wartet, in Scala nicht durch einen Thread abgebildet. Weitere wichtige Eigenschaften von Akka und dem Aktormodell werden im nächsten Kapiteln behandelt.
 

@@ -155,7 +155,7 @@ Da es im Prototyp unter den High-Level-Komponenten drei Teile gibt, ergeben sich
 Die Frontend-Backend Schnittstelle ist eine REST-Schnittstelle. Frontend schickt HTTP-Anfragen an die Backend-Endpoints. Die Endpoints sind in der Tabelle \ref{tab:rest} aufgelistet.
 
 \begin{table} \centering
-	\begin{tabular}{|P{2cm}|P{2cm}|P{3cm}|P{7cm}|} 
+	\begin{tabular}{|P{1.75cm}|P{1.75cm}|P{2.5cm}|P{7cm}|} 
 		\hline
 		\textbf{Name} & \textbf{Methode} & \textbf{Pfad} & \textbf{Beschreibung}\\
 		
@@ -212,7 +212,7 @@ Mittels ReentrantFutures werden folgende Informationen aus dem Aktorsystem gelie
 Futures werden im Aktorsystem für die Zustellung der Ergebnisse alle Operationen verwendet. Um diese Operationen zu starten, müssen Nachrichten an das System geschickt werden. Beschreibung verwendeter Nachrichten findet man in Tabelle \ref{tab:operations}.
 
 \begin{table} \centering
-	\begin{tabular}{|p{5cm}|p{5cm}|p{5cm}|} 
+	\begin{tabular}{|p{4.9cm}|p{4.25cm}|p{4.25cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Beschreibung} & \textbf{Parameter} \\
 		
@@ -252,7 +252,7 @@ Der erste Schritt bei der Implementierung des Raft-Algorithmus hat eine sorgfäl
 Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen des Leaders und der Kandidaten. Jeder Knoten im Cluster startet im Followerzustand und setzt sofort einen Heartbeat-Timer. Wenn der Timer abläuft und sich noch kein einziger Leader gemeldet hat, wird er zum Kandidaten. Der Übergang in eine neue Rolle wird durch die Verwendung von Akka-Behaviors erreicht. Die Liste von Nachrichten, die ein Knoten in dieser Rolle empfangen kann, ist in der Tabelle \ref{tab:followerReceive} dargestellt.
 
 \begin{table} \centering
-	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.9cm}|p{3.55cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
 		
@@ -295,7 +295,7 @@ Die Übergangsrollen spielen in Raft die Kandidaten. Jeder Follower, dessen Hear
 Nach dem Übergang von einem Follower- in einen Kandidatenzustand, startet der Kandidat einen Election-Timer (Wahl-Timer). Wenn innerhalb der Election-Zeit der Kandidat nicht zum Leader wird oder kein anderer Leader sich mit einer AppendEntries Nachricht meldet, beginnt die nächste Runde des Wahlprozesses. Alle anderen Veränderungen im Zustand eines Kandidaten werden durch empfangene und gesendete Nachricht eingeleitet, die in Tabellen \ref{tab:candidateReceive} bzw. \ref{tab:candidateSend} abgebildet sind.
 
 \begin{table} \centering
-	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
 		
@@ -316,7 +316,7 @@ Nach dem Übergang von einem Follower- in einen Kandidatenzustand, startet der K
 \end{table}
 
 \begin{table} \centering
-	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
 		
@@ -340,10 +340,10 @@ Der Leader in Raft ist der \textit{Garant des Konsenses} und spielt eine zentral
 
 Nachdem ein Kandidat die Wahl gewonnen hat und zum Leader geworden ist, etabliert er sein Leadership durch die erste Heartbeat-Nachricht, die an alle Knoten geschickt wird. Die Heartbeat-Nachricht muss der Leader regelmäßig aussenden, sodass Followers wissen, dass der Leader noch existiert. Deswegen setzt er einen Timer und schickt die Nachricht alle N Sekunden. Diese Zeit N muss unbedingt kleiner sein als die Zeit des Election-Timers eines Followers. Wenn das nicht der Fall ist, werden Followers immer schneller entscheiden, dass der Leader abgestürzt oder nicht mehr erreichbar ist. Unter diesen Umständen kann ein Leader nie ausgewählt werden.
 
-Der Leader ist eine Schnittstelle zwischen Clients und dem Rest des Clusters. Die Nachrichten, die ein Leader aussendet und erhält, sind in Tabellen \ref{tab:leaderReceive} und \ref{tab:leaderSend} aufgelistet.
+Der Leader ist eine Schnittstelle zwischen Clients und dem Rest des Clusters. Die Nachrichten, die ein Leader aussendet und erhält, sind in Tabellen \ref{tab:leaderSend} und  \ref{tab:leaderReceive} aufgelistet.
 
 \begin{table} \centering
-	\begin{tabular}{|P{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+	\begin{tabular}{|P{2.5cm}|p{3.35cm}|p{3.7cm}|p{3.55cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
 		
@@ -371,33 +371,19 @@ Der Leader ist eine Schnittstelle zwischen Clients und dem Rest des Clusters. Di
 		 - Akka-Referenz auf den Follower, der diese Nachricht geschickt hat
 		 & 
 		 - Wenn ein Wert nicht erfolgreich repliziert wurde, dann ist der Log des Followers immer noch im inkonsistenten Zustand. Man muss 1 von NextIndex subtrahieren und versuchen, den Logeintrag vor dem NextIndex an den Follower zu schicken
-		 
-		 - Wenn ein Wert erfolgreich repliziert wurde, checken, ob das schon beim ersten Versuch erfolgreich war. In diesem Fall muss UUID des Eintrags in PendingItem in der Nachricht vorhanden sein.
-		 
-		 - Wenn ein Wert erfolgreich repliziert wurde aber UUID nicht da ist, dann ist es ein Follower, dessen Log immer noch nicht konsistent ist. Follower bittet um Zusendung des nächsten Logeintrags.
 		 & 
 		 - Wenn ein Wert nicht erfolgreich repliziert wurde, dann AppendEntries mit dem vorherigen Logeintrag schicken
 		 
-		 - Wenn der Wert auf ein Quorum repliziert wurde, Client-Response Nachricht mit dem aktuellen Stand des Zustandsautomaten zurück an den Client schicken
-		 
-		 - Wenn ein Logeintrag bei einem Follower mit dem inkonsistenten Log erfolgreich repliziert wurde, dann AppendEntries mit dem nächsten Logeintrag schicken\\
-		 
-		 \hline
-		 AppendEntriesResponse 
-		 &
-		 
-		 & 
-		 
-		 & keine\\
+		 - Wenn der Wert auf ein Quorum repliziert wurde, Client-Response Nachricht mit dem aktuellen Stand des Zustandsautomaten zurück an den Client schicken\\
 		
 		\hline
 	\end{tabular}
-	\caption{Nachrichten, die ein Kandidat aussenden kann.}
+	\caption{Nachrichten, die ein Leader empfangen kann.}
 	\label{tab:leaderReceive}
 \end{table}
 
 \begin{table} \centering
-	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{4cm}|p{4.5cm}|} 
+	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.8cm}|p{3.25cm}|} 
 		\hline
 		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
 		
