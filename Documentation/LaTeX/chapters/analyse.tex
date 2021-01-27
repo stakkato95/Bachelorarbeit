@@ -4,6 +4,7 @@
 Um die Problemstellung der Arbeit besser zu verstehen, muss man einige grundlegende Konzepte der \textit{Schwarmrobotik} und verteilter Systeme verstehen. Außerdem gibt dieses Kapitel einen Überblick auf den aktuellen Stand der Technik, Optionen und Empfehlungen für technische Umsetzung.
 
 \section{Vorteile von Drohnenschwärmen}
+\label{cha:prosCons}
 
 Heutzutage werden Drohnen entweder einzeln verwendet oder sie finden in einem Drohnenschwarm ihre Anwendung. Beide Verwendungsarten haben Vor- und Nachteile und umfassende Anwendungsfälle. Um den Weg von einer Drohne zu einem Drohnenschwarm zu verstehen, muss man zuerst die Forschungsrichtungen im Feld von UAVs \footnote{Ein UAV ist ein Luftfahrzeug, das ohne eine an Bord befindliche Besatzung autark durch einen Computer oder vom Boden über eine Fernsteuerung betrieben und navigiert werden kann.} (Unmanned Aerial Vehicles) betrachten. Zu UAVs gibt es vier Forschungsschwerpunkte, die an entsprechende Herausforderungen gebunden sind:
 
@@ -28,6 +29,7 @@ Diese Bachelorarbeit fokussiert sich auf Drohnenschwärme und auf die Koordinati
 \end{description}
 
 \section{Autonomie im Drohnenschwarm}
+\label{cha:swarmAutonomy}
 
 Die im vorherigen Subkapitel erwähnten Vorteile eines Schwarms werden von Softwarekomponenten einer Drohne definiert, da diese Softwarekomponenten das Kommunikationsmuster bestimmen. Ein wichtiger Aspekt dabei ist die Autonomie von Drohnen. Autonomie ermöglicht einzelne Drohnen eines Schwarms lokale Entscheidungen zu treffen. 
 
@@ -74,6 +76,7 @@ Dies widerspricht dem Regel, dass jeder einzigartige Knoten in einem verteilten 
 In der Zukunft sollen Systeme wie Drohnenschwärme selbstorganisierend und autonom agieren. Laut den Forschungsergebnissen der Technischen Hochschule Lausanne (EPFL) sind allerdings mit aktuellem Stand der Technik in der Robotik 100\% selbstorganisierende Systeme weniger effizient als die Systeme, in denen Kommunikation zwischen Knoten möglich ist. Das heißt, dass die Synchronisation von Knoten im Schwarm eine gültige und in der Branche durchaus akzeptierte Lösung ist.
 
 \section{Analyse von Algorithmen für verteilte, ausfallsichere Systeme}
+\label{cha:concurrency}
 
 Wie bereits im vorherigen Kapitel festgestellt, ist für das Funktionieren eines Schwarms die \textit{Replikation} von Daten zwischen den Knoten erforderlich. Diese Aufgabe umfasst das Themengebiet der verteilten Systeme. Die Auswahl eines Algorithmus beeinflusst die Robustheit des Gesamtsystems und wird in diesem Kapitel betrachtet.
 
