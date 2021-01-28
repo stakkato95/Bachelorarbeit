@@ -314,16 +314,15 @@ Raft teilt die Zeit in Terms (Amtsperioden) beliebiger Länge. Terms werden mit 
 Um die Verständlichkeit zu verbessern, trennt Raft die Schlüsselelemente des Konsenses:
 
 \begin{description} 
-	\item[Wahlprozess des Leaders.] Jeder neu gestartete Knoten wird standardmäßig zum Follower. Ein Knoten bleibt im Follower-Zustand, solange er einen \textit{Heartbeat} von einem Leader erhält. Um eine Wahl zu beginnen, erhöht ein Follower den zuletzt gesehenen Term und wechselt in den Kandidatenzustand. Er stimmt dann für sich selbst und schickt RequestVote-Anfragen parallel an alle anderen Knoten im Cluster. Ein Kandidat bleibt in diesem Zustand, bis eine von drei Optionen vorkommt:
+	\item[Wahlprozess des Leaders.] Jeder neu gestartete Knoten wird standardmäßig zum Follower. Ein Knoten bleibt im Follower-Zustand, solange er einen \textit{Heartbeat} von einem Leader erhält. Wenn Follower innerhalb einer bestimmten Zeit keine Heartbeat-Nachrichten vom Leader erhält, beginnt der Wahlprozess. Um eine Wahl zu beginnen, erhöht ein Follower den zuletzt gesehenen Term und wechselt in den Kandidatenzustand. Er stimmt dann für sich selbst und schickt RequestVote-Anfragen parallel an alle anderen Knoten im Cluster. Ein Kandidat bleibt in diesem Zustand, bis eine von drei Optionen vorkommt:
 	
 	\begin{enumerate}
-		\item der Kandidat gewinnt die Wahl
+		\item der Kandidat gewinnt die Wahl (ein Kandidat gewinnt die Wahl, wenn er Stimmen von einem Quorum für denselben Term erhält)
 		
 		\item ein anderer Knoten etabliert sich als Leader
 		
 		\item ein Zeitraum vergeht ohne Gewinner
 		
-		\item ein Kandidat gewinnt eine Wahl, wenn er Stimmen von einem Quorum für denselben Term erhält
 	\end{enumerate}
 	
 	\item[Replikation des Logs.] Sobald ein Leader gewählt wurde, beginnt er mit der Bearbeitung der Client-Anfragen. Jede Client-Anfrage enthält einen Befehl, der von den replizierten Zustandsautomaten ausgeführt werden soll. Der Leader hängt den Befehl als einen neuen Eintrag an sein Log an und schickt AppendEntries-Anfragen zu jedem anderen Knoten, um den Eintrag zu replizieren. Wenn der Eintrag sicher repliziert wurde (d.h. auf einem Quorum aller Knoten), wendet der Leader den Eintrag auf seinen Zustandsautomaten an und gibt das Ergebnis dieser Ausführung an den Client zurück. Jeder Logeintrag enthielt einen Befehl inklusive einer Term-Nummer.
@@ -355,7 +354,7 @@ Um die Entscheidung zu treffen, mit welchem Algorithmus ein Produktivsystem impl
 	Wenn ein Follower glaubt, dass der Leader abgestürzt ist, wird der Follower zum Kandidaten und ersucht alle anderen Knoten für ihn zu stimmen. Wenn der Kandidat Stimmen von der Mehrheit aller Knoten (Quorum) bekommt, wird er zum Leader. Hier enden die Ähnlichkeiten beider Algorithmen.
 	
 	
-	\item[Technische Unterschiede.] Der größte Unterschied zwischen Paxos und Raft ist, wie die Safety Eigenschaft (always returning a correct result) von Paxos und Raft gewährleistet wird.
+	\item[Technische Unterschiede.] Der größte Unterschied zwischen Paxos und Raft ist, wie die Safety Eigenschaft von Paxos und Raft gewährleistet wird.
 	
 	In Paxos wird ein Follower für jeden Kandidaten stimmen, der um eine Stimme ersucht. Daher muss die Antwort eines Followers alle bei dem Kandidaten fehlenden Logeinträge enthalten. Der Nachteil dieses Verfahrens ist die Belastung des Netzwerks, wenn ein Follower, der lange Zeit nicht erreichbar war, zu einem Kandidaten wird. Dieser Kandidat wird eine lange Liste von fehlenden Einträgen benötigen, was unter anderem eine langsame Zusammenführung aller fehlenden Einträge zur Folge hat. In Raft seinerseits wird ein Follower nur den Kandidaten anerkennen, der mindestens genauso einen aktuellen Log hat, wie der Follower. Generell wollte der Erfinder des Raft-Algorithmus die Einfachheit auf zwei Arten erreichen: die Anzahl von Nachrichten zu reduzieren und den Wahlprozess zu optimieren.
 	
