@@ -358,7 +358,7 @@ Um die Entscheidung zu treffen, mit welchem Algorithmus ein Produktivsystem impl
 	
 	In Paxos wird ein Follower für jeden Kandidaten stimmen, der um eine Stimme ersucht. Daher muss die Antwort eines Followers alle bei dem Kandidaten fehlenden Logeinträge enthalten. Der Nachteil dieses Verfahrens ist die Belastung des Netzwerks, wenn ein Follower, der lange Zeit nicht erreichbar war, zu einem Kandidaten wird. Dieser Kandidat wird eine lange Liste von fehlenden Einträgen benötigen, was unter anderem eine langsame Zusammenführung aller fehlenden Einträge zur Folge hat. In Raft seinerseits wird ein Follower nur den Kandidaten anerkennen, der mindestens genauso einen aktuellen Log hat, wie der Follower. Generell wollte der Erfinder des Raft-Algorithmus die Einfachheit auf zwei Arten erreichen: die Anzahl von Nachrichten zu reduzieren und den Wahlprozess zu optimieren.
 	
-	In der Abbildung \ref{fig:logstate} wird ein Cluster mit fünf Knoten abgebildet. Der Knoten 1 ist der Leader, der Knoten 4 (mit zwei Logeinträgen) ist ein Follower, der eine lange Zeit keine Updates von dem Leader erhalten hat. Laut dem Paxos-Algorithmus kann der vierte Follower auch zum Leader gewählt werden. Wenn er tatsächlich zum Leader gewählt wird, muss er alle fehlenden Logeinträge anordnen. Laut Raft also entweder der dritte oder fünfte Knoten. Nur diese beiden Knoten haben einen Log, der zumindestens genauso aktuell ist, wie der Log bei einem Quorum aller Knoten.
+	In der Abbildung \ref{fig:logstate} wird ein Cluster mit fünf Knoten abgebildet. Der Knoten 1 ist der Leader, der Knoten 4 (mit zwei Logeinträgen) ist ein Follower, der eine lange Zeit keine Updates von dem Leader erhalten hat. Laut dem Paxos-Algorithmus kann der vierte Follower auch zum Leader gewählt werden. Wenn er tatsächlich zum Leader gewählt wird, muss er alle fehlenden Logeinträge anordnen. Laut Raft also entweder der dritte oder fünfte Knoten. Nur diese beiden Knoten haben einen Log, das zumindestens genauso aktuell ist, wie der Log bei einem Quorum aller Knoten.
 	
 	\begin{figure}
 		\centering
@@ -384,10 +384,10 @@ Der Vergleich in der Tabelle \ref{tab:vergleich} zeigt deutlich, dass Raft durch
 		Veröffentlichung & 2014 & 1998\\
 		
 		\hline
-		Erklärbarkeit des Algorithmus in der ursprünglichen Publikation laut dem Raft Artikel & Sehr gut & Mittelmäßig\\
+		Erklärbarkeit des Algorithmus in der ursprünglichen Publikation laut \cite{Ongaro14insearch} & Sehr gut & Mittelmäßig\\
 		
 		\hline
-		Erklärbarkeit des Kerns des Algorithmus laut dem Raft Artikel  & Gut & Gut\\
+		Erklärbarkeit des Kerns des Algorithmus laut \cite{Ongaro14insearch}  & Gut & Gut\\
 		
 		\hline
 		Spielraum bei der Implementierung & Weniger Spielraum. Einfach zu implementieren. & Mehr Spielraum. Viele Annahmen müssen getroffen werden.\\
