@@ -234,9 +234,9 @@ Paxos \cite{Lamport98thepart-time} und Raft \cite{Ongaro14insearch} gehören zur
 
 \subsection{Der Paxos-Algorithmus}
 
-Paxos ist eine Familie von Algorithmen zur Lösung des Konsenses in einem Netzwerk unzuverlässiger oder fehlbarer Knoten. Der Paxos-Algorithmus wurde erstmals 1989 vorgestellt und nach einem fiktiven legislativen Konsenssystem auf der griechischen Insel Paxos benannt \cite{Lamport98thepart-time}. Es wurde später als Artikel im Jahre 1998 veröffentlicht. Der ursprüngliche Algorithmus des Erfinders Leslie Lamport nennt man üblicherweise \textit{Singledecree-Paxos}.
+Paxos ist eine Familie von Algorithmen zur Lösung des Konsenses in einem Netzwerk unzuverlässiger Knoten. Der Paxos-Algorithmus wurde erstmals 1989 vorgestellt und nach einem fiktiven legislativen Konsenssystem auf der griechischen Insel Paxos benannt \cite{Lamport98thepart-time}. Er wurde später als Artikel im Jahre 1998 veröffentlicht. Der ursprüngliche Algorithmus des Erfinders Leslie Lamport nennt man üblicherweise \textit{Singledecree-Paxos}.
 
-Die Paxos-Algorithmen \cite{Lamport2001paxos-made-simple} umfassen ein Spektrum von Kompromissen zwischen der Anzahl der Knoten, der Anzahl der Round-Trip-Messages, der Aktivitäten einzelner Knoten, der Anzahl der gesendeten Nachrichten und den möglichen Fehlern. Obwohl kein deterministischer, fehlertoleranter Konsens-Algorithmus den Fortschritt in einem asynchronen Netzwerk garantieren kann, sichert Paxos Safety (das System gibt immer einen korrekten Wert zurück).
+Die Paxos-Algorithmen \cite{Lamport2001paxos-made-simple} umfassen ein Spektrum von Kompromissen zwischen der Anzahl der Knoten, der Anzahl der Round-Trip-Messages, der Aktivitäten einzelner Knoten, der Anzahl der gesendeten Nachrichten und den möglichen Fehlern. Obwohl kein deterministischer, fehlertoleranter Konsens-Algorithmus den \textit{Fortschritt} (fehlerfreie Operation des Algorithmus) in einem asynchronen Netzwerk garantieren kann, sichert Paxos \textit{Safety} (das System gibt immer einen korrekten Wert zurück).
 
 Beim Singledecree-Paxos \cite{Renesse15paxosmade} hängen die Operationen, die Knoten ausführen können, von ihren Rollen ab:
 
