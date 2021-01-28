@@ -78,37 +78,37 @@ In der Zukunft sollen Systeme wie Drohnenschwärme selbstorganisierend und auton
 \section{Analyse von Konsens Algorithmen für verteilte, ausfallsichere Systeme}
 \label{cha:concurrency}
 
-Wie bereits im vorherigen Kapitel festgestellt, ist für das Funktionieren eines Schwarms die \textit{Replikation} von Daten zwischen den Knoten erforderlich. Diese Aufgabe umfasst das Themengebiet der verteilten Systeme. Die Auswahl eines Algorithmus beeinflusst die Robustheit des Gesamtsystems und wird in diesem Kapitel betrachtet.
+Wie bereits im vorherigen Kapitel festgestellt, ist für das Funktionieren eines Schwarms der \textit{Konsens} zwischen den Knoten erforderlich. Die Auswahl eines Konsens-Algorithmus beeinflusst die Robustheit des Gesamtsystems und wird in diesem Kapitel betrachtet.
 
 Verteilte Systeme finden in mehreren Teilen der IT-Infrastruktur Einsatz. Häufige Einsatzbereiche sind:
 
 \begin{enumerate}
-	\item Dateisysteme
+	\item Dateisysteme (Ceph, IPFS, HDFS)
 	
-	\item Datenbanken
+	\item Datenbanken (relationale Datenbanken, NoSQL und NewSQL Datenbanken)
 	
-	\item Key-Value Stores (Schlüssel-Werte-Datenbank oder eine verteilte Hashtabelle)
+	\item Key-Value Stores (Schlüssel-Werte-Datenbank oder eine verteilte Hashtabelle wie DynamoDB, etcd und Redis)
 	
-	\item Queues (Verarbeitung von Datenströmen, keine einfache Datenstruktur in diesem Kontext)
+	\item Queues (Verarbeitung von Datenströmen, keine einfache Datenstruktur in diesem Kontext; RabbitMQ, Kafka)
 \end{enumerate}
 
-Diese genannten Systeme haben zwar unterschiedliche Anwendungsgebiete, die potenziell auftretenden Probleme sind allerdings sehr ähnlich \cite{Buyya08cloudcomputing}:
+Diese genannten Systeme haben zwar unterschiedliche Anwendungsgebiete, die potenziell auftretenden Herausforderungen sind allerdings sehr ähnlich \cite{Buyya08cloudcomputing}:
 
 \begin{description} 
-	\item[Fehlertoleranz.] Um die Fehlertoleranz zu garantieren, muss ein System mehrere \textit{Replica} aller Daten besitzen und beim Ausfall der \textit{Hauptreplica} auf eine andere reibungslos und ohne Datenverlust umsteigen können. Die Anzahl von Replicas soll immer eine ungerade Zahl sein, typischerweise werden drei oder fünf Replicas gebildet. Eine ungerade Zahl verhindert eine gleiche Aufteilung von Stimmen zwischen 2 Gruppen von Replicas. Gibt es eine Mehrheit aller Knoten, die den gleichen Wert haben, werden diese Daten als korrekt gewertet.
+	\item[Fehlertoleranz.] Um die Fehlertoleranz zu garantieren, muss ein System mehrere \textit{Replica} aller Daten besitzen und beim Ausfall der \textit{Hauptreplica} auf eine andere reibungslos und ohne Datenverlust umsteigen können. Die Anzahl von Replicas soll immer eine ungerade Zahl sein, typischerweise werden drei oder fünf Replicas gebildet. Eine ungerade Anzahl verhindert bei Systemen, in denen der korrekte Wert durch eine Abstimmung zwischen allen Replicas bestimmt wird, eine gleiche Aufteilung von Stimmen zwischen 2 Gruppen von Replicas. Gibt es eine Mehrheit aller Knoten, die den gleichen Wert haben, werden diese Daten als korrekt gewertet.
 	
-	\item[Zeit für Wiederherstellung.] Ein Algorithmus für das verteilte System muss die Zeit für die Wiederherstellung verkürzen und intelligent auf mögliche Ausfälle reagieren. Der Algorithmus muss das Cluster unter neuen Einschränkungen umstrukturieren.
+	\item[Zeit für Wiederherstellung.] Ein Algorithmus für verteilte Systeme muss die Zeit für die Wiederherstellung nach einem Ausfall verkürzen. Der Absturz bringt mit sich Einschränkungen, nach denen das System sich anpassen muss.
 	
 	\item[Erreichbarkeit.] Die Erreichbarkeit eines Systems stellt fest, ob ein Knoten als abgestürzt oder als laufend betrachtet werden soll \cite{Armbrust10aview}. In verteilten Systemen gibt es allerdings keine Möglichkeit zu überprüfen, ob ein Knoten abgestürzt ist oder das Netzwerk dieses Knotens überfordert ist. In modernen Systemen wird das Problem mittels \textit{Timer} gelöst. Nach einem bestimmten Timeout wird der Knoten als nicht mehr erreichbar markiert. Nach welcher Zeit ein Knoten als nicht erreichbar betrachtet wird, ist für jede Konfiguration des Clusters spezifisch.
 	
-	\item[Skalierbarkeit und Durchsatzrate.] Die Skalierbarkeit und Durchsatzrate in verteilten Systemen wird durch “Scaling up” Verfahren erreicht, wenn zur Lösung eines Problems oder für eine bessere Fehlertoleranz mehrere Knoten zusammengebracht werden. Für ein klassisches “Scaling up” Verfahren braucht man dagegen einen neuen, leistungsfähigeren Rechner, der alle Anfragen abarbeiten kann. Eine weitere Lösungsmöglichkeit stellen Algorithmen dar. Ein Algorithmus, der Leseoperationen von allen Knoten eines Clusters erlaubt, ist viel effizienter als der Algorithmus, der Leseoperationen nur von einem einzigen Knoten im Cluster erlaubt. Dieser einzige Knoten ist leicht zu überfordern und wird durch eine Hohe Nutzung des Netzwerks öfter als andere Knoten ausfallen.
+	\item[Skalierbarkeit und Durchsatzrate.] Die Skalierbarkeit und Durchsatzrate in verteilten Systemen wird durch “Scaling out” Verfahren erreicht. "Scaping out" bedeutet, dass zur Lösung eines Problems mehrere Knoten zusammengebracht werden. Für ein klassisches “Scaling out” Verfahren braucht man dagegen einen neuen, leistungsfähigeren Rechner, der alle Anfragen abarbeiten kann. Eine weitere Lösungsmöglichkeit stellen verteilte Algorithmen dar. Ein Algorithmus, der Leseoperationen von allen Knoten eines Clusters erlaubt, ist viel effizienter als Algorithmus, der Leseoperationen nur von einem einzigen Knoten im Cluster erlaubt. Dieser einzige Knoten ist leicht überfordert und wird durch eine hohe Nutzung des Netzwerks öfter als andere Knoten ausfallen.
 	
 	\item[Synchronisation und Timestamping.] Timestamping hilft bei der Auflösung von Konflikten, beispielsweise zwischen Einträgen auf unterschiedlichen Knoten einer verteilten Datenbank bzw. eines verteilten Dateisystems. Der Eintrag mit dem höheren Timestamp hat Vorrang und soll einen anderen Eintrag überschreiben. Das Problem mit den Timestamps ist die Desynchronisation von Uhren auf allen Knoten. Mit modernen Technologien ist eine vollständige Synchronisation zwischen allen Knoten nicht umsetzbar. Selbst für Google, das mehrere Datenzentren mit Atomuhren und GPS-Fehlerkorrektur betreibt, ist das derzeit unmöglich. Die \textit{TrueTime API} liefert zwar für höchst genaue Timestamps einen Zeitabstand, diese sind allerdings nicht eindeutig.
 	
 	Eine weitere Lösung bietet die sogenannte \textit{"Logische Anordnung von Operationen"}, welche Algorithmen zur Verfügung stellt. Es werden logische Zusammenhänge zwischen Operationen festgestellt und dadurch eine Linearisierung jener Operationen erreicht. (Anordnung dieser Operationen, als ob sie nacheinander ausgeführt wären).
 \end{description}
 
-Bis auf die Erreichbarkeit können all diese Probleme durch die Kombination spezialisierter Algorithmen gelöst werden. Die Replikation von Daten zwischen mehreren Knoten eines Schwarms fällt in die Klasse der Konsens-Algorithmen. Diese Klasse von Algorithmen löst ein fundamentales Problem der verteilten Systeme und Multiagentensysteme: die allgemeine Zuverlässigkeit des Systems beim Vorhandensein einer größeren Anzahl fehlerhafter Knoten. Dies erfordert eine Koordinierung der Knoten, um einen Konsens zu erreichen bzw. sich über einen Wert zu einigen, der für eine Rechenoperation nötig ist. Mögliche Anwendungen von Konsens-Algorithmen umfassen:
+Bis auf die Erreichbarkeit können all diese Probleme durch die Kombination spezialisierter Algorithmen gelöst werden. Algorithmen zur Replikiation von Daten zwischen mehreren Knoten eines Schwarms fallen in die Klasse der Konsens-Algorithmen. Diese Klasse von Algorithmen löst ein fundamentales Problem der verteilten Systeme und Multiagentensysteme: die Sicherstellung der allgemeinen Zuverlässigkeit des Systems beim Vorhandensein einer größeren Anzahl fehlerhafter Knoten. Dies erfordert eine Koordinierung der Knoten, um einen Konsens zu erreichen bzw. sich über einen Wert zu einigen, der für eine Rechenoperation nötig ist. Mögliche Anwendungsbereiche von Konsens-Algorithmen umfassen:
 
 \begin{enumerate}
 	\item Anordnung von Transaktionen einer Datenbank
