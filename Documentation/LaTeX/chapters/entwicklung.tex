@@ -138,7 +138,7 @@ Betrachtet man den entwickelten Prototypen abstrakt, kann er auf drei Bestandtei
 	\label{fig:system}
 \end{figure}
 
-Das Aktorsystem wurde separat dargestellt, um zu betonen, dass das Aktorsystem eine wichtige und stichhaltige Komponente repräsentiert. Während des Entwicklungsprozesses war diese Ansicht auch dadurch gestützt, dass das Aktorsystem in einem separaten Projekt implementiert wurde. Frontend und Backend wurden ebenfalls in eigenen Projekten implementiert.
+Das Aktorsystem wurde separat dargestellt, um zu betonen, dass das Aktorsystem eine wichtige Komponente repräsentiert. Während des Entwicklungsprozesses war diese Ansicht auch dadurch gestützt, dass das Aktorsystem in einem separaten Projekt implementiert wurde. Frontend und Backend wurden ebenfalls in eigenen Projekten implementiert.
 
 Der Prototyp verfügt über mehrere Schnittstellen. Sowohl zwischen den \textit{High-Level-Komponenten} als auch zwischen den \textit{Low-Level-Komponenten}. Zuerst werden die Schnittstellen zwischen den High-Level-Komponenten betrachtet.
 
@@ -152,7 +152,7 @@ Da es im Prototyp unter den High-Level-Komponenten drei Teile gibt, ergeben sich
 	\item Backend-Aktorsystem Schnittstelle
 \end{enumerate}
 
-Die Frontend-Backend Schnittstelle ist eine REST-Schnittstelle. Frontend schickt HTTP-Anfragen an die Backend-Endpoints. Die Endpoints sind in der Tabelle \ref{tab:rest} aufgelistet.
+Die Frontend-Backend Schnittstelle ist eine REST-Schnittstelle. Das Frontend schickt HTTP-Anfragen an die Backend-Endpoints. Die Endpoints sind in der Tabelle \ref{tab:rest} aufgelistet.
 
 \begin{table} \centering
 	\begin{tabular}{|P{1.75cm}|P{1.75cm}|P{2.5cm}|P{7cm}|} 
@@ -245,7 +245,7 @@ Der Aktor, an den das Ergebnis zugestellt wird, ist immer der Client-Aktor. Dies
 
 \section{Kommunikationsprotokoll zwischen den Teilkomponenten und den Knoten in Raft}
 
-Der erste Schritt bei der Implementierung des Raft-Algorithmus hat eine sorgfältige Analyse des Originalartikels erfordert. Obwohl auf Seite 4 des Raft-Artikels eine Zusammenfassung aller Rollen, Nachrichten und Feinheiten der Verhalten dargestellt wird, sind zusätzliche Informationen und Feinheiten im gesamten Artikel zu finden. Im nächsten Schritt waren alle Feinheiten nach den Rollen des Algorithmus gruppiert und in drei Tabellen entsprechend zusammengefasst.
+Der erste Schritt bei der Implementierung des Raft-Algorithmus hat eine sorgfältige Analyse des Originalartikels erfordert. Obwohl auf Seite 4 des Raft-Artikels eine Zusammenfassung aller Rollen, Nachrichten und Feinheiten der Verhalten dargestellt wird, sind zusätzliche Informationen und Feinheiten im gesamten Artikel zu finden. Im nächsten Schritt werden alle Feinheiten nach den Rollen des Algorithmus gruppiert und in drei Tabellen entsprechend zusammengefasst.
 
 \subsection{Definition des Followers in Raft}
 
@@ -277,7 +277,8 @@ Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen d
 		
 		- Leader Information updaten
 		
-		- den letzten Logeintrag des Leaders mit dem eigenen letzten Logeintrag vergleichen. Wenn sie unterschiedlich sind, dann wird der Leader um die Zusendung des vorletzten Eintrags gebeten und weitere Schritte werden nicht ausgeführt. Wenn sie gleich sind, wird der Eintrag an den eigenen 
+		- den letzten Logeintrag des Leaders mit dem eigenen letzten Logeintrag vergleichen. Wenn sie unterschiedlich sind, dann wird der Leader um die Zusendung des vorletzten Eintrags gebeten und weitere Schritte werden nicht ausgeführt.
+		
 		 & - ein nicht erfolgreicher AppendEntriesResponse, um dem Leader darauf hinzuweisen, dass er diesem Knoten bisherige Logeinträge senden soll
 		 
 		 - ein erfolgreicher AppendEntriesResponse mit dem UUID des neuen Elements, wenn ein neuer Logeintrag an den lokalen Log angehängt wurde. Ein UUID hilft dem Leader zu identifizieren, welche Einträge und wie vielen Knoten schon erfolgreich repliziert wurden\\
@@ -290,7 +291,7 @@ Der Follower ist ein passiver Knoten in Raft und reagiert nur auf die Anfragen d
 
 \subsection{Definition des Kandidaten in Raft}
 
-Die Übergangsrollen spielen in Raft die Kandidaten. Jeder Follower, dessen Heartbeat-Timer abgelaufen ist, kann zum Kandidaten werden. Der Erfolg des jeweiligen Kandidaten hängt hauptsächlich davon ab, wie kurz sein Heartbeat Timeout ist.
+Eine temporäre Rolle spielen in Raft die Kandidaten. Jeder Follower, dessen Heartbeat-Timer abgelaufen ist, kann zum Kandidaten werden. Der Erfolg des jeweiligen Kandidaten hängt hauptsächlich davon ab, wie kurz sein Heartbeat Timeout ist.
 
 Nach dem Übergang von einem Follower- in einen Kandidatenzustand, startet der Kandidat einen Election-Timer (Wahl-Timer). Wenn innerhalb der Election-Zeit der Kandidat nicht zum Leader wird oder kein anderer Leader sich mit einer AppendEntries Nachricht meldet, beginnt die nächste Runde des Wahlprozesses. Alle anderen Veränderungen im Zustand eines Kandidaten werden durch empfangene und gesendete Nachricht eingeleitet, die in Tabellen \ref{tab:candidateReceive} bzw. \ref{tab:candidateSend} abgebildet sind.
 
@@ -318,7 +319,7 @@ Nach dem Übergang von einem Follower- in einen Kandidatenzustand, startet der K
 \begin{table} \centering
 	\begin{tabular}{|p{2.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|} 
 		\hline
-		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Änderungen innerhalb des Knotens} & \textbf{Antwort auf diese Nachricht}\\
+		\textbf{Name der Nachricht} & \textbf{Payload} & \textbf{Wann wird die Nachricht ausgeschickt} & \textbf{Antwort auf diese Nachricht}\\
 		
 		\hline
 		RequestVote & - Term des Kandidaten
