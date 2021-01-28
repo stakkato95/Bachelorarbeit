@@ -126,11 +126,9 @@ Um die richtige Entscheidung bei der Auswahl eines Algorithmus für den Konsens 
 
 \subsection{Konsens in verteilten Systemen}
 
-Der Konsens über einen Wert erfordert eine Einigung zwischen einer Reihe von Knoten. Einige der Knoten können ausfallen oder auf andere Weise unzuverlässig funktionieren. Deswegen muss der Konsens-Algorithmus fehlertolerant sein. Die Knoten haben die Aufgabe, die geltenden Werte zu ermitteln, miteinander zu kommunizieren und sich auf einen einzigen Wert zu einigen \cite{Fischer83impossibilityof}.
-
 Konsens ist ein grundlegendes Problem bei der Steuerung von Multiagentensystemen. Definition von Konsens besagt, dass alle Knoten sich auf einen Mehrheitswert einigen müssen \cite{Saber03consensusproblems}. In diesem Zusammenhang ist es erforderlich, dass sich im verteilten System eine Mehrheit bildet. Die Mehrheit ist immer um einen Knoten größer als die Hälfte aller Knoten, die am Wahlprozess teilnehmen. Ein oder mehrere fehlerhafte Knoten können das resultierende Ergebnis jedoch so verzerren, dass möglicherweise kein Konsens oder ein falsches Ergebnis erzielt wird.
 
-Algorithmen, die den Konsens lösen, wurden entwickelt, um mit einer begrenzten Anzahl fehlerhafter Knoten umzugehen. Ein Knoten wird als fehlerhaft bezeichnet, wenn in diesem Knoten ein Fehler auftritt, durch den der Knoten nicht mehr erreichbar wird. Diese Algorithmen müssen eine Reihe von Anforderungen erfüllen, um nützlich zu sein. Ein Konsens-Algorithmus, der fehlerhafte Knoten toleriert, muss folgende Eigenschaften erfüllen \cite{Fischer83impossibilityof}:
+Algorithmen, die den Konsens lösen, wurden entwickelt, um mit einer begrenzten Anzahl fehlerhafter Knoten umzugehen. Ein Knoten wird als fehlerhaft bezeichnet, wenn in diesem Knoten ein Fehler auftritt, durch den der Knoten nicht mehr erreichbar wird. Diese Algorithmen müssen eine Reihe von Anforderungen erfüllen, um nützlich zu sein. Ein Konsens-Algorithmus, der fehlerhafte Knoten toleriert, muss folgende Kriterien erfüllen \cite{Fischer83impossibilityof}:
 
 \begin{description} 
 	\item[Termination.] Jeder korrekte Knoten entscheidet sich für einen Wert.
@@ -146,7 +144,7 @@ All diese Kriterien werden durch die grundlegende Eigenschaften verteilter Syste
 \begin{description} 
 	\item[Atomarität.] Die wichtigste Eigenschaft aller verteilten Systeme besteht darin, dass ein System auf einen externen Beobachter wie ein einziger Rechner wirken soll. Das System verbirgt Implementierungsdetails und dient als eine Abstraktionsschicht.
 	
-	\item[Widerstandsfähigkeit.] Wie es schon erwähnt wurde, braucht ein System mehrere Replicas, um einem Ausfall zu widerstehen. Die Widerstandsfähigkeit, also die Anzahl der Fehler, die ein System überleben kann, wird mit folgender Formel ausgerechnet:
+	\item[Widerstandsfähigkeit.] Wie es schon erwähnt wurde, braucht ein System mehrere Replicas, um einem Ausfall zu widerstehen. Die Widerstandsfähigkeit, also die Anzahl der Fehler, die ein System überstehen kann, wird mit folgender Formel ausgerechnet:
 	
 	\[
 	T = (n - 1) / 2
@@ -154,13 +152,13 @@ All diese Kriterien werden durch die grundlegende Eigenschaften verteilter Syste
 	bei der
 	\begin{conditions*}
 		T  &  Anzahl der überstandenen Fehler \\
-		n  &  Anzahl der Knoten im Cluster \\
+		n  &  Anzahl der Knoten im Cluster bzw. Drohnenschwarm \\
 	\end{conditions*}
 \end{description}
 
-Nach einem sogenannten \textit{"brain split"}, also wenn eine Verbindung zwischen zwei Rechenzentren (oder Clusters bzw. Gruppen von UAVs) unterbrochen wird, wird nur das Rechenzentrum, das über die Mehrheit aller Rechner verfügt, weiter aktuelle Daten liefern \cite{Chandra96unreliablefailure}.
+Nach einem sogenannten \textit{"brain split"}, also wenn eine Verbindung zwischen zwei Gruppen von Knoten unterbrochen wird, wird nur die Gruppe die über die Mehrheit aller Knoten verfügt, weiter aktuelle Daten liefern \cite{Chandra96unreliablefailure}.
 
-Neben den Eigenschaften müssen auch Bausteine für Modellierung verteilter Systeme in Betracht gezogen werden. Zu den grundlegendsten und für das Konsensproblem am relevantesten gehören:
+Neben den Eigenschaften müssen auch grundlegende Konzepte für Modellierung verteilter Systeme in Betracht gezogen werden. Zu den grundlegendsten und für das Konsensproblem am relevantesten gehören:
 
 \begin{description} 
 	\item[State Machine Replication (Replikation eines Zustandsautomaten).] In der Informatik ist die Replikation eines Zustandsautomaten eine allgemeine Methode zur Implementierung eines fehlertoleranten Dienstes durch Replikation von Knoten, Koordinierung der Clients und der Replicas \cite{Schneider90implementingfault-tolerant}. Der Ansatz definiert auch die Richtlinien für das Verständnis und die Entwicklung von Algorithmen für Replikation der Zustandsautomaten.
@@ -186,7 +184,7 @@ Neben den Eigenschaften müssen auch Bausteine für Modellierung verteilter Syst
 	\item[Atomic Broadcast (auch Total Order Broadcast).] Es ist ein Broadcast, bei dem alle korrekten Knoten Nachrichten in derselben Reihenfolge empfangen \cite{Défago04totalorder}. Die Sendung wird als "atomar" bezeichnet, weil sie entweder an allen Knoten korrekt ankommt oder alle Teilnehmer das Senden abbrechen. Das beschreibt keine spezifische Implementierung, es ist lediglich ein Konzept und ein wichtiger Bestandteil des verteilten Rechnens. Die drei wichtigsten formalen Eigenschaften des Atomic Broadcast sind:
 	
 	\begin{enumerate}
-		\item \textit{Validity} (Gültigkeit). Wenn ein korrekt funktionierender Knoten eine Nachricht abschickt, dann empfängt ein anderer Knoten die Nachricht unvermeidlich.
+		\item \textit{Validity} (Gültigkeit). Wenn ein korrekt funktionierender Knoten eine Nachricht abschickt, dann empfangen alle anderen Knoten die Nachricht unvermeidlich.
 		
 		\item \textit{Agreement} (Einigung). Wenn ein korrekt funktionierender Knoten eine Nachricht empfängt, dann empfangen die Nachricht auch alle anderen Knoten.
 		
@@ -207,19 +205,19 @@ Diese theoretischen Bausteine sind Grundlagen für zwei Algorithmen, die für di
 Das Wichtigste bei Konsens-Algorithmen ist es zu verstehen, dass \cite{Saber03consensusproblems}:
 
 \begin{enumerate}
-	\item Konsens die Eignung auf einen einzelnen Wert bedeutet.
+	\item Konsens die Eignung auf einen einzelnen Wert bedeutet
 	
-	\item der Konsens erreicht ist, wenn sich die Mehrheit auf einen Wert einigt.
+	\item der Konsens erreicht ist, wenn sich die Mehrheit auf einen Wert einigt
 	
-	\item jeder Knoten im System den erreichten Konsens irgendwann erfahren muss.
+	\item jeder Knoten im System den erreichten Konsens irgendwann erfahren muss
 	
-	\item die Kommunikationskanäle fehlerhaft sind, was die Erreichung des Konsenses verhindert.
+	\item die Kommunikationskanäle fehleranfällig sind, was die Erreichung des Konsenses verhindern kann
 \end{enumerate}
 
 Generell gibt es zwei Klassen von Systemen, die auf Konsens-Algorithmen beruhen:
 
 \begin{description} 
-	\item[Leader-Replica Schema.] In diesem System gibt es immer einen \textit{Leader}, der Anfragen beantwortet und Schreiboperationen steuert und Replicas (Followers), die Daten eines Leaders replizieren. In diesem Fall müssen alle Knoten nur dann einen Konsens erreichen, wenn der alte Leader abstürzt oder aus einem anderen Grund unerreichbar wird. In der Zwischenzeit, während noch kein neuer Leader ausgewählt wird, ist das System für neue Anfragen nicht erreichbar.
+	\item[Leader-Replica Schema.] In diesem System gibt es immer einen \textit{Leader}, der Anfragen beantwortet und Schreiboperationen steuert und Replicas (Followers), die Daten eines Leaders replizieren. In diesem Fall müssen alle Knoten nur dann einen Konsens erreichen, wenn der alte Leader abstürzt oder aus einem anderen Grund unerreichbar wird. In der Zwischenzeit, während noch kein neuer Leader ausgewählt ist, ist das System für neue Anfragen nicht erreichbar.
 	
 	\item[Peer-to-Peer Schema.] In diesem System verhalten sich alle Knoten gleich und sind gleichrangig. Wenn mehrere Clients einige Werte schreiben wollen, müssen sich die Knoten untereinander einigen, in welcher Reihenfolge neue Werte im System gespeichert werden. Das ist wichtig, da alle Knoten dieselbe Reihenfolge gespeicherter Werte einhalten müssen. In diesem Fall muss der Konsens kontinuierlich aufrechterhalten werden.
 \end{description}
